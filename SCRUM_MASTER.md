@@ -27,6 +27,13 @@
 
 ## AI Agent Initialization
 
+### CRITICAL DIRECTIVES
+
+**IMPORTANT: AI agents MUST follow these rules:**
+
+1. **NO GIT OPERATIONS**: Do not stage, commit, or perform any git operations. The developer will handle all version control.
+2. **NO JSDOC COMMENTS**: Do not add JSDoc comments to any code. This codebase is designed for rapid refactoring and human-readable documentation wastes tokens and time.
+
 ### Start Here: Working on This Project
 
 When starting a new session to contribute to the Mindbody MCP Server, use these instructions to identify and implement your next task.
@@ -75,10 +82,8 @@ When you complete a story, you should have:
 - ✅ All acceptance criteria met
 - ✅ >90% test coverage (or >85% for non-critical features)
 - ✅ All code following architecture principles (adapters, versioning, caching)
-- ✅ JSDoc comments on all public functions
 - ✅ Story marked complete in AGILE_PLAN.md with `- [x]`
 - ✅ Progress tracking section updated
-- ✅ Clean commit with proper message format
 
 ### Quick Start Example
 
@@ -96,8 +101,7 @@ I will implement this story following the workflow process:
 2. Design - Planning adapters, cache strategy, and tests
 3. Implementation - Building the feature
 4. Testing - Achieving >90% coverage
-5. Documentation - JSDoc comments and examples
-6. Completion - Marking story as done
+5. Completion - Review and mark story as done
 
 Starting implementation...
 ```
@@ -246,7 +250,6 @@ src/adapters/mindbody/
 
 **Rule:** All configuration MUST be:
 - Type-safe (using Zod schemas)
-- Documented with JSDoc comments
 - Provide sensible defaults
 - Support environment variable overrides
 
@@ -839,54 +842,13 @@ const bookingWorkflow = new Workflow({
 });
 ```
 
-### AI Configuration Documentation
-
-**Required Documentation in README:**
-
-```markdown
-## AI Configuration
-
-### Providers
-
-The MCP server supports multiple AI providers via Mastra:
-
-- **OpenAI** (default)
-  - Models: gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo
-  - Setup: Set `OPENAI_API_KEY` environment variable
-
-- **Anthropic**
-  - Models: claude-3-opus, claude-3-sonnet, claude-3-haiku
-  - Setup: Set `ANTHROPIC_API_KEY` environment variable
-
-### Model Configuration
-
-Configure AI behavior in `config/ai.ts`:
-
-\`\`\`typescript
-export const aiConfig = {
-  provider: 'openai',
-  model: 'gpt-4-turbo-preview',
-  temperature: 0.7,
-  maxTokens: 4096,
-};
-\`\`\`
-
-### Agent Presets
-
-Pre-configured agents for common tasks:
-
-- **appointment-scheduler**: Low temperature (0.3) for deterministic scheduling
-- **client-support**: Medium temperature (0.7) for conversational interactions
-- **data-analyst**: Low temperature (0.2) for accurate data analysis
-```
-
 ---
 
 ## MCP Server Standards
 
 ### Tool Definitions
 
-**Rule:** ALL MCP tools MUST have clear, comprehensive descriptions.
+**Rule:** MCP tools MUST have concise, functional descriptions. The inputSchema documents parameters.
 
 **Tool Structure:**
 ```typescript
@@ -894,34 +856,7 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 const getClientsToolDefinition: Tool = {
   name: 'get_clients',
-  description: `
-    Retrieves a list of clients from the Mindbody system.
-
-    This tool supports filtering by search text, date ranges, and pagination.
-    Results are cached for 1 hour to minimize API calls.
-
-    Use Cases:
-    - Search for clients by name, email, or phone
-    - List all clients created in a date range
-    - Paginate through large client lists
-
-    Parameters:
-    - searchText: Optional text to search in client names, emails, or phone
-    - startDate: Optional ISO 8601 date to filter clients created after
-    - endDate: Optional ISO 8601 date to filter clients created before
-    - limit: Number of results to return (1-200, default: 100)
-    - offset: Number of results to skip for pagination (default: 0)
-
-    Returns:
-    Array of client objects with id, name, email, phone, and membership info.
-
-    Example:
-    {
-      "searchText": "john smith",
-      "limit": 50,
-      "offset": 0
-    }
-  `,
+  description: 'Retrieves clients from Mindbody with optional filtering by search text, date ranges, and pagination. Cached for 1 hour.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -1113,281 +1048,78 @@ function isValidData(data: unknown): data is { value: string } {
 
 ### Error Handling
 
-**Rule:** Use custom error classes with proper inheritance.
+**Rule:** Use standard Error class with descriptive messages.
 
 ```typescript
-// Base error class
-export class MindbodyMCPError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode: number = 500
-  ) {
-    super(message);
-    this.name = 'MindbodyMCPError';
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
+// Throw errors with clear, actionable messages
+throw new Error('Failed to fetch clients: Invalid API key');
+throw new Error('Validation failed: startDate must be ISO 8601 format');
+throw new Error('Cache operation failed: Database connection lost');
 
-// Specific error classes
-export class APIError extends MindbodyMCPError {
-  constructor(message: string, statusCode: number) {
-    super(message, 'API_ERROR', statusCode);
-    this.name = 'APIError';
-  }
-}
-
-export class ValidationError extends MindbodyMCPError {
-  constructor(message: string, public fields: string[]) {
-    super(message, 'VALIDATION_ERROR', 400);
-    this.name = 'ValidationError';
-  }
-}
-
-export class CacheError extends MindbodyMCPError {
-  constructor(message: string) {
-    super(message, 'CACHE_ERROR', 500);
-    this.name = 'CacheError';
-  }
+// Catch and re-throw with context
+try {
+  await apiAdapter.getClients(params);
+} catch (error) {
+  throw new Error(`Client fetch failed: ${error.message}`);
 }
 ```
 
 ### Logging Standards
 
-**Rule:** Use structured logging with consistent levels.
+**Rule:** Use standard console methods for logging.
+
+- `console.log()` for informational messages
+- `console.error()` for errors
+- Include relevant context in messages
+- No custom logger infrastructure required
 
 ```typescript
-enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error',
-}
-
-interface LogContext {
-  [key: string]: any;
-}
-
-class Logger {
-  constructor(private context: string) {}
-
-  debug(message: string, context?: LogContext) {
-    this.log(LogLevel.DEBUG, message, context);
-  }
-
-  info(message: string, context?: LogContext) {
-    this.log(LogLevel.INFO, message, context);
-  }
-
-  warn(message: string, context?: LogContext) {
-    this.log(LogLevel.WARN, message, context);
-  }
-
-  error(message: string, error?: Error, context?: LogContext) {
-    this.log(LogLevel.ERROR, message, {
-      ...context,
-      error: error?.message,
-      stack: error?.stack,
-    });
-  }
-
-  private log(level: LogLevel, message: string, context?: LogContext) {
-    console.log(JSON.stringify({
-      timestamp: new Date().toISOString(),
-      level,
-      context: this.context,
-      message,
-      ...context,
-    }));
-  }
-}
-
-// Usage
-const logger = new Logger('AppointmentService');
-logger.info('Booking appointment', { clientId: '123', appointmentId: '456' });
+// Example
+console.log('Booking appointment', { clientId: '123', appointmentId: '456' });
+console.error('Failed to book appointment:', error);
 ```
 
 ### Code Formatting
 
-**Rule:** Use Prettier with the following configuration.
-
-**.prettierrc:**
-```json
-{
-  "semi": true,
-  "trailingComma": "es5",
-  "singleQuote": true,
-  "printWidth": 100,
-  "tabWidth": 2,
-  "useTabs": false,
-  "arrowParens": "always",
-  "endOfLine": "lf"
-}
-```
+**Rule:** Run Prettier before completing any story.
 
 ---
 
 ## Documentation Requirements
 
-### Code Documentation
+**Rule:** Only add documentation when it provides functional value for AI agents or developers modifying code.
 
-**Rule:** All public functions, classes, and interfaces MUST have JSDoc comments.
-
-```typescript
-/**
- * Retrieves a list of clients from the Mindbody API.
- *
- * This function implements caching to minimize API calls. Cached results
- * are stored for 1 hour before being refreshed.
- *
- * @param params - The search parameters for filtering clients
- * @param params.searchText - Optional text to search in names, emails, or phones
- * @param params.startDate - Optional ISO 8601 date to filter clients created after
- * @param params.endDate - Optional ISO 8601 date to filter clients created before
- * @param params.limit - Number of results to return (1-200, default: 100)
- * @param params.offset - Number of results to skip for pagination (default: 0)
- *
- * @returns Promise resolving to an array of client objects
- *
- * @throws {ValidationError} If parameters fail validation
- * @throws {APIError} If the Mindbody API returns an error
- * @throws {CacheError} If cache operations fail
- *
- * @example
- * ```typescript
- * const clients = await getClients({
- *   searchText: 'john',
- *   limit: 50,
- * });
- * ```
- */
-async function getClients(params: GetClientsParams): Promise<Client[]> {
-  // Implementation
-}
-```
-
-### README Requirements
-
-Each feature/module MUST have a README with:
-
-1. **Overview** - What the module does
-2. **Architecture** - How it's structured
-3. **Usage Examples** - Code examples for common use cases
-4. **API Reference** - Complete API documentation
-5. **Configuration** - Configuration options
-6. **Testing** - How to run tests
-7. **Troubleshooting** - Common issues and solutions
-
-**Example README Structure:**
-```markdown
-# Appointment Service
-
-## Overview
-
-The Appointment Service provides complete appointment scheduling capabilities...
-
-## Architecture
-
-```
-src/services/appointment/
-  ├── service.ts          # Main service class
-  ├── types.ts            # TypeScript types
-  ├── validators.ts       # Zod validation schemas
-  └── service.test.ts     # Unit tests
-```
-
-## Usage
-
-\`\`\`typescript
-import { AppointmentService } from './services/appointment';
-
-const service = new AppointmentService(apiAdapter, cache);
-const appointments = await service.getAppointments({ startDate: '2024-01-01' });
-\`\`\`
-
-## API Reference
-
-### `getAppointments(params)`
-...
-
-## Configuration
-
-...
-
-## Testing
-
-\`\`\`bash
-bun test src/services/appointment/service.test.ts
-\`\`\`
-
-## Troubleshooting
-
-...
-```
-
-### Inline Comments
-
-**Rule:** Use comments to explain WHY, not WHAT.
-
-```typescript
-// ❌ BAD - Explains what the code does (obvious)
-// Loop through clients
-for (const client of clients) {
-  // Add client to list
-  list.push(client);
-}
-
-// ✅ GOOD - Explains why we're doing something non-obvious
-// Cache appointments for 5 minutes instead of 1 hour because
-// availability changes frequently during peak booking times
-const ttl = isPeakHours() ? CACHE_TTL.REALTIME : CACHE_TTL.DYNAMIC;
-```
+- Update project README only if adding new major features or configuration
+- No per-module READMEs required
+- No inline comments unless explaining non-obvious business logic
+- Code should be self-documenting through clear naming
 
 ---
 
 ## Definition of Done
 
-### Feature Completion Checklist
-
 A story is considered DONE when ALL of the following are complete:
 
 - [ ] **Implementation**
-  - [ ] Code implements all acceptance criteria
-  - [ ] Code follows architecture principles (adapter pattern, versioning)
-  - [ ] All external dependencies use adapters
-  - [ ] Error handling is comprehensive
-  - [ ] Input validation uses Zod schemas
-  - [ ] Caching is implemented for read operations
-  - [ ] Logging is added at appropriate levels
+  - [ ] All acceptance criteria met
+  - [ ] Adapter pattern used for external dependencies (API, cache, database)
+  - [ ] Input validation using Zod schemas
+  - [ ] Caching implemented for read operations with appropriate TTL
+  - [ ] Error handling with descriptive messages
 
 - [ ] **Testing**
   - [ ] Unit tests achieve >90% coverage (or >85% for non-critical features)
-  - [ ] All happy paths tested
-  - [ ] All error paths tested
-  - [ ] Edge cases tested
-  - [ ] Mock implementations created for all external dependencies
   - [ ] Tests pass consistently
-
-- [ ] **Documentation**
-  - [ ] JSDoc comments on all public functions/classes
-  - [ ] README updated (if new module)
-  - [ ] MCP tool description is clear and comprehensive
-  - [ ] Configuration documented
-  - [ ] Examples provided
+  - [ ] All external dependencies mocked
 
 - [ ] **Code Quality**
   - [ ] No TypeScript errors
-  - [ ] No use of `any` type (except in tests when necessary)
+  - [ ] No `any` types (except in tests when necessary)
   - [ ] Prettier formatting applied
-  - [ ] No console.log() (use logger instead)
-  - [ ] No commented-out code
-  - [ ] No TODO comments (convert to issues)
 
 - [ ] **Integration**
-  - [ ] MCP tool registered and exposed
-  - [ ] Service integrated with main server
-  - [ ] Database migrations applied (if needed)
-  - [ ] Configuration added to config files
+  - [ ] MCP tool registered and functional
+  - [ ] Story marked complete in AGILE_PLAN.md
 
 ---
 
@@ -1395,90 +1127,29 @@ A story is considered DONE when ALL of the following are complete:
 
 ### Story Implementation Workflow
 
-When an AI agent is assigned a story from AGILE_PLAN.md, follow these steps:
+When implementing a story from AGILE_PLAN.md:
 
-#### 1. Story Analysis (5 min)
-- [ ] Read story description and acceptance criteria
-- [ ] Identify dependencies (database, APIs, other services)
-- [ ] Review related stories for context
-- [ ] Confirm understanding of requirements
+#### 1. Analysis
+- [ ] Read acceptance criteria and identify dependencies
+- [ ] Determine required adapters, cache strategy, and test approach
 
-#### 2. Design (10 min)
-- [ ] Determine which adapters are needed
-- [ ] Design interface contracts
-- [ ] Plan database schema changes (if needed)
-- [ ] Identify configuration requirements
-- [ ] Design cache strategy
-- [ ] Outline test scenarios
-
-#### 3. Implementation (60-80% of time)
-- [ ] Create/update type definitions
-- [ ] Implement adapter interfaces
-- [ ] Implement real adapter (API client)
-- [ ] Implement mock adapter for tests
+#### 2. Implementation
+- [ ] Create type definitions and Zod schemas
+- [ ] Implement adapter interfaces (real + mock)
 - [ ] Implement service layer logic
 - [ ] Implement MCP tool handler
-- [ ] Add error handling
-- [ ] Add logging
-- [ ] Add validation
+- [ ] Add error handling and validation
 
-#### 4. Testing (20-30% of time)
+#### 3. Testing
 - [ ] Create test fixtures
-- [ ] Write unit tests for happy paths
-- [ ] Write unit tests for error paths
-- [ ] Write unit tests for edge cases
-- [ ] Verify >90% (or >85%) coverage
-- [ ] Run tests and fix failures
+- [ ] Write unit tests (happy paths, error paths, edge cases)
+- [ ] Verify coverage target met (90% or 85%)
+- [ ] Ensure all tests pass
 
-#### 5. Documentation (10 min)
-- [ ] Add JSDoc comments
-- [ ] Update README if needed
-- [ ] Document configuration
-- [ ] Add usage examples
-
-#### 6. Code Review Self-Check (5 min)
+#### 4. Completion
 - [ ] Review Definition of Done checklist
-- [ ] Check for `any` types
-- [ ] Verify error handling
-- [ ] Confirm tests pass
 - [ ] Run Prettier
-- [ ] Check for console.log()
-
-#### 7. Completion
-- [ ] Mark story as complete in AGILE_PLAN.md
-- [ ] Commit changes with descriptive message
-- [ ] Update progress tracking
-
-### Commit Message Format
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-**Types:**
-- `feat`: New feature
-- `fix`: Bug fix
-- `refactor`: Code refactoring
-- `test`: Adding tests
-- `docs`: Documentation changes
-- `chore`: Maintenance tasks
-
-**Example:**
-```
-feat(appointment): implement get_appointments tool (EP1-S01)
-
-- Add AppointmentService with getAppointments() method
-- Implement MindbodyAPIAdapter for appointment endpoints
-- Add SQLite caching with 1-hour TTL
-- Create comprehensive unit tests (95% coverage)
-- Add MCP tool definition and handler
-
-Closes EP1-S01
-```
+- [ ] Mark story complete in AGILE_PLAN.md
 
 ---
 
@@ -1556,7 +1227,6 @@ mindbody-mcp/
 │   │   ├── appointment.ts
 │   │   └── ...
 │   └── utils/
-│       ├── logger.ts
 │       ├── errors.ts
 │       ├── validation.ts
 │       └── cache-keys.ts
@@ -1567,10 +1237,6 @@ mindbody-mcp/
 │   │   └── ...
 │   └── mocks/
 │       └── (additional mocks if needed)
-├── docs/
-│   ├── API.md                      # API documentation
-│   ├── ARCHITECTURE.md             # Architecture overview
-│   └── TESTING.md                  # Testing guide
 ├── config/
 │   └── default.json                # Default configuration
 ├── .env.example                    # Environment template
@@ -1613,10 +1279,10 @@ bun run db:seed          # Seed test data
 
 ### Story Estimation Guide
 
-- **2 points**: Simple read operation with caching (~2-3 hours)
-- **3 points**: Standard read/write operation (~3-4 hours)
-- **5 points**: Complex operation with validation (~5-6 hours)
-- **8 points**: Multi-step workflow or transaction (~8-10 hours)
+- **2 points**: Simple read operation with caching
+- **3 points**: Standard read/write operation
+- **5 points**: Complex operation with validation
+- **8 points**: Multi-step workflow or transaction
 
 ### Coverage Targets by Epic
 
@@ -1635,15 +1301,12 @@ bun run db:seed          # Seed test data
 
 ## Conclusion
 
-This Scrum Master document provides comprehensive guidelines for implementing the Mindbody MCP Server. By following these standards, AI agents will produce:
+This Scrum Master document provides streamlined guidelines for implementing the Mindbody MCP Server. By following these standards, AI agents will produce:
 
 - **Consistent architecture** using adapters and versioning
-- **Comprehensive test coverage** with unit tests for all features
+- **Comprehensive test coverage** with unit tests (90%+ or 85%+)
 - **Robust caching** to minimize API calls and token usage
-- **Well-documented code** with clear MCP tool descriptions
 - **Type-safe implementations** without using `any`
-- **Production-ready code** that meets all quality standards
+- **Production-ready code** that meets core quality standards
 
 When in doubt, refer back to this document. If guidelines conflict with story requirements, prioritize this document's standards and flag the conflict for resolution.
-
-**Remember:** Quality over speed. Better to deliver fewer stories with high quality than many stories with technical debt.
