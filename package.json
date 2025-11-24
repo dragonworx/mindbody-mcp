@@ -11,7 +11,8 @@
     "inspect": "bun run src/index.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "bun test --coverage",
+    "test:connectivity": "bun run src/test-connectivity.ts"
   },
   "keywords": [
     "mcp",
