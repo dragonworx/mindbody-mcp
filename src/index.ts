@@ -20,11 +20,13 @@ import {
   analyzeFormulaNotesSchema,
   writeClientProfileSchema,
   getAppointmentsSchema,
+  getBookableItemsSchema,
   handleSyncClients,
   handleExportSalesHistory,
   handleAnalyzeFormulaNotes,
   handleWriteClientProfile,
   handleGetAppointments,
+  handleGetBookableItems,
 } from "./mcp/tools/index.js";
 import {
   getQuotaStatus,
@@ -226,6 +228,55 @@ async function main(): Promise<void> {
             required: ["startDate"],
           },
         },
+        {
+          name: "get_bookable_appointments",
+          description:
+            "Retrieves available appointment types that can be booked. Returns service types with pricing, staff availability, and location information. Results are cached for 24 hours.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              locationIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "Filter by specific location IDs (optional)",
+              },
+              programIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "Filter by specific program IDs (optional)",
+              },
+              sessionTypeIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "Filter by specific session type IDs (optional)",
+              },
+              staffIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "Filter by specific staff IDs (optional)",
+              },
+              limit: {
+                type: "number",
+                minimum: 1,
+                maximum: 200,
+                default: 100,
+                description: "Number of results to return (default: 100, max: 200)",
+              },
+              offset: {
+                type: "number",
+                minimum: 0,
+                default: 0,
+                description: "Number of results to skip for pagination",
+              },
+              force: {
+                type: "boolean",
+                default: false,
+                description: "Override cache and rate limit checks",
+              },
+            },
+            required: [],
+          },
+        },
       ],
     };
   });
@@ -252,6 +303,10 @@ async function main(): Promise<void> {
         case "get_appointments": {
           const args = getAppointmentsSchema.parse(request.params.arguments);
           return await handleGetAppointments(args, appointmentService);
+        }
+        case "get_bookable_appointments": {
+          const args = getBookableItemsSchema.parse(request.params.arguments);
+          return await handleGetBookableItems(args, appointmentService);
         }
         default:
           throw new Error(`Unknown tool: ${request.params.name}`);

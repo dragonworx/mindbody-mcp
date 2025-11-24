@@ -7,9 +7,16 @@ import {
   type PaginatedAppointmentResponse,
   transformAppointment,
   GetAppointmentsParamsSchema,
+  type BookableItem,
+  type GetBookableItemsParams,
+  type MindbodyBookableItem,
+  type PaginatedBookableItemResponse,
+  transformBookableItem,
+  GetBookableItemsParamsSchema,
 } from "../types/appointment.js";
 
 const CACHE_TTL_SECONDS = 3600;
+const BOOKABLE_ITEMS_CACHE_TTL_SECONDS = 86400;
 
 function generateCacheKey(params: GetAppointmentsParams): string {
   const parts = [
@@ -181,5 +188,149 @@ export class AppointmentService {
       `DELETE FROM cache WHERE expires_at < ?`
     ).run(Date.now());
     return result.changes;
+  }
+
+  async getBookableItems(params: GetBookableItemsParams): Promise<{
+    bookableItems: BookableItem[];
+    pagination?: {
+      limit: number;
+      offset: number;
+      pageSize: number;
+      totalResults: number;
+    };
+  }> {
+    const validatedParams = GetBookableItemsParamsSchema.parse(params);
+
+    if (!validatedParams.force) {
+      const cached = await this.getBookableItemsFromCache(validatedParams);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    const response = await this.apiClient.getBookableItems({
+      locationIds: validatedParams.locationIds,
+      programIds: validatedParams.programIds,
+      sessionTypeIds: validatedParams.sessionTypeIds,
+      staffIds: validatedParams.staffIds,
+      limit: validatedParams.limit,
+      offset: validatedParams.offset,
+      force: validatedParams.force,
+    });
+
+    const bookableItems = response.BookableItems.map(transformBookableItem);
+    await this.storeBookableItems(bookableItems);
+
+    const result = {
+      bookableItems,
+      pagination: response.PaginationResponse ? {
+        limit: response.PaginationResponse.RequestedLimit,
+        offset: response.PaginationResponse.RequestedOffset,
+        pageSize: response.PaginationResponse.PageSize,
+        totalResults: response.PaginationResponse.TotalResults,
+      } : undefined,
+    };
+
+    await this.setBookableItemsCache(validatedParams, result);
+
+    return result;
+  }
+
+  private generateBookableItemsCacheKey(params: GetBookableItemsParams): string {
+    const parts = [
+      `bookable_items`,
+      params.locationIds?.join(",") || "all-locations",
+      params.programIds?.join(",") || "all-programs",
+      params.sessionTypeIds?.join(",") || "all-session-types",
+      params.staffIds?.join(",") || "all-staff",
+      params.limit.toString(),
+      params.offset.toString(),
+    ];
+    return parts.join(":");
+  }
+
+  private async getBookableItemsFromCache(params: GetBookableItemsParams): Promise<{
+    bookableItems: BookableItem[];
+    pagination?: {
+      limit: number;
+      offset: number;
+      pageSize: number;
+      totalResults: number;
+    };
+  } | null> {
+    const cacheKey = this.generateBookableItemsCacheKey(params);
+    const cached = this.db.db.prepare(
+      `SELECT value, expires_at FROM cache WHERE key = ?`
+    ).get(cacheKey) as { value: string; expires_at: number } | undefined;
+
+    if (!cached) {
+      return null;
+    }
+
+    if (Date.now() > cached.expires_at) {
+      this.db.db.prepare(`DELETE FROM cache WHERE key = ?`).run(cacheKey);
+      return null;
+    }
+
+    this.db.db.prepare(
+      `UPDATE cache SET hit_count = hit_count + 1 WHERE key = ?`
+    ).run(cacheKey);
+
+    return JSON.parse(cached.value);
+  }
+
+  private async setBookableItemsCache(
+    params: GetBookableItemsParams,
+    result: {
+      bookableItems: BookableItem[];
+      pagination?: {
+        limit: number;
+        offset: number;
+        pageSize: number;
+        totalResults: number;
+      };
+    }
+  ): Promise<void> {
+    const cacheKey = this.generateBookableItemsCacheKey(params);
+    const expiresAt = Date.now() + BOOKABLE_ITEMS_CACHE_TTL_SECONDS * 1000;
+    const value = JSON.stringify(result);
+
+    this.db.db.prepare(
+      `INSERT OR REPLACE INTO cache (key, value, expires_at, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).run(cacheKey, value, expiresAt, Date.now());
+  }
+
+  private async storeBookableItems(bookableItems: BookableItem[]): Promise<void> {
+    const stmt = this.db.db.prepare(
+      `INSERT OR REPLACE INTO bookable_items
+       (id, name, session_type_id, program_id, raw_data, last_synced_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
+
+    for (const item of bookableItems) {
+      stmt.run(
+        item.id,
+        item.name,
+        item.sessionType?.id ?? null,
+        item.programId,
+        JSON.stringify(item.rawData),
+        item.lastSyncedAt
+      );
+    }
+  }
+
+  async clearBookableItemsCache(pattern?: string): Promise<number> {
+    if (pattern) {
+      const result = this.db.db.prepare(
+        `DELETE FROM cache WHERE key LIKE ?`
+      ).run(`${pattern}%`);
+      return result.changes;
+    } else {
+      const result = this.db.db.prepare(
+        `DELETE FROM cache WHERE key LIKE 'bookable_items%'`
+      ).run();
+      return result.changes;
+    }
   }
 }

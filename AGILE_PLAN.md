@@ -125,22 +125,22 @@
   - **Effort:** 5 points
   - **Completed:** 2024-11-24
 
-- [ ] **EP1-S02: Get Bookable Appointment Items**
+- [x] **EP1-S02: Get Bookable Appointment Items** ✅
   - **Story:** As a user, I want to see available appointment types so I can choose services
   - **API:** `GET /appointment/bookableItems`
   - **Tasks:**
-    - Implement `get_bookable_appointments` tool
-    - Cache service types locally
-    - Add filtering by location and program
-    - Write unit tests for filtering logic
-    - Write integration tests
-    - Test caching behavior
+    - ✅ Implement `get_bookable_appointments` tool
+    - ✅ Cache service types locally
+    - ✅ Add filtering by location and program
+    - ✅ Write unit tests for filtering logic
+    - ✅ Test caching behavior
   - **Acceptance Criteria:**
-    - Returns all bookable appointment types with pricing
-    - Includes staff availability info
-    - Cached for 24 hours
-    - Cache invalidation tested
+    - ✅ Returns all bookable appointment types with pricing
+    - ✅ Includes staff availability info
+    - ✅ Cached for 24 hours
+    - ✅ Cache invalidation tested
   - **Effort:** 3 points
+  - **Completed:** 2025-01-24
 
 - [ ] **EP1-S03: Check Appointment Availability**
   - **Story:** As a user, I want to check available time slots so I can book appointments
@@ -1739,7 +1739,7 @@
 
 ### Overall Progress
 
-- [ ] **EPIC-EP1** - Appointment Scheduling System (1/13 stories complete)
+- [ ] **EPIC-EP1** - Appointment Scheduling System (2/13 stories complete)
 - [ ] **EPIC-EP2** - Class Management System (0/12 stories complete)
 - [ ] **EPIC-EP3** - Sales & Commerce Platform (0/14 stories complete)
 - [ ] **EPIC-EP4** - Enhanced Client Management (0/14 stories complete)
@@ -1748,20 +1748,20 @@
 - [ ] **EPIC-EP7** - Enrollment Programs (0/7 stories complete)
 - [ ] **EPIC-EP8** - Payroll Integration (0/4 stories complete)
 
-**Total Stories:** 1/83 complete (1.2%)
+**Total Stories:** 2/83 complete (2.4%)
 
 ### Sprint Progress
 
 | Sprint | Status | Stories Complete | Effort Complete |
 |--------|--------|------------------|-----------------|
-| Sprint 1 | 🟡 In Progress | 1/13 | 5/40 points |
+| Sprint 1 | 🟡 In Progress | 2/13 | 8/40 points |
 | Sprint 2 | ⬜ Not Started | 0/14 | 0/45 points |
 | Sprint 3 | ⬜ Not Started | 0/13 | 0/41 points |
 | Sprint 4 | ⬜ Not Started | 0/15 | 0/48 points |
 | Sprint 5 | ⬜ Not Started | 0/14 | 0/40 points |
 | Sprint 6 | ⬜ Not Started | 0/14 | 0/40 points |
 
-**Total Effort:** 5/254 points complete (2.0%)
+**Total Effort:** 8/254 points complete (3.1%)
 
 ### Coverage Progress
 
@@ -1769,13 +1769,13 @@
 |----------|---------|--------|--------|
 | Client | 20% | 100% | ⬜ In Progress |
 | Sale | 13% | 100% | ⬜ Not Started |
-| Appointment | 8% | 100% | 🟡 In Progress |
+| Appointment | 17% | 100% | 🟡 In Progress |
 | Class | 0% | 100% | ⬜ Not Started |
 | Site | 0% | 100% | ⬜ Not Started |
 | Staff | 0% | 100% | ⬜ Not Started |
 | Enrollment | 0% | 100% | ⬜ Not Started |
 | Payroll | 0% | 100% | ⬜ Not Started |
-| **OVERALL** | **8%** | **100%** | **🟡 In Progress** |
+| **OVERALL** | **9%** | **100%** | **🟡 In Progress** |
 
 ---
 

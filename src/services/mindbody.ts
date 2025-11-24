@@ -2,6 +2,12 @@ import type { Config } from "../config.js";
 import { MINDBODY_API_BASE } from "../config.js";
 import { AuthService } from "./auth.js";
 import { RateLimitGuard } from "./rateLimit.js";
+import type {
+  MindbodyAppointment,
+  PaginatedAppointmentResponse,
+  MindbodyBookableItem,
+  PaginatedBookableItemResponse,
+} from "../types/appointment.js";
 
 interface MindbodyRequestOptions {
   method?: string;
@@ -194,25 +200,7 @@ export class MindbodyApiClient {
     limit?: number;
     offset?: number;
     force?: boolean;
-  }): Promise<{
-    Appointments: Array<{
-      Id: string;
-      StartDateTime: string;
-      EndDateTime: string;
-      ClientId?: string;
-      StaffId?: string;
-      LocationId?: string;
-      SessionTypeId?: string;
-      Status?: string;
-      [key: string]: unknown;
-    }>;
-    PaginationResponse?: {
-      RequestedLimit: number;
-      RequestedOffset: number;
-      PageSize: number;
-      TotalResults: number;
-    };
-  }> {
+  }): Promise<PaginatedAppointmentResponse> {
     const queryParams: Record<string, string | number | boolean | undefined> = {
       StartDate: params.startDate,
       EndDate: params.endDate,
@@ -232,6 +220,40 @@ export class MindbodyApiClient {
 
     return this.request({
       endpoint: "/appointment/appointments",
+      params: queryParams,
+      force: params.force,
+    });
+  }
+
+  async getBookableItems(params: {
+    locationIds?: string[];
+    programIds?: string[];
+    sessionTypeIds?: string[];
+    staffIds?: string[];
+    limit?: number;
+    offset?: number;
+    force?: boolean;
+  }): Promise<PaginatedBookableItemResponse> {
+    const queryParams: Record<string, string | number | boolean | undefined> = {
+      limit: params.limit ?? 100,
+      offset: params.offset ?? 0,
+    };
+
+    if (params.locationIds && params.locationIds.length > 0) {
+      queryParams.LocationIds = params.locationIds.join(",");
+    }
+    if (params.programIds && params.programIds.length > 0) {
+      queryParams.ProgramIds = params.programIds.join(",");
+    }
+    if (params.sessionTypeIds && params.sessionTypeIds.length > 0) {
+      queryParams.SessionTypeIds = params.sessionTypeIds.join(",");
+    }
+    if (params.staffIds && params.staffIds.length > 0) {
+      queryParams.StaffIds = params.staffIds.join(",");
+    }
+
+    return this.request({
+      endpoint: "/appointment/bookableItems",
       params: queryParams,
       force: params.force,
     });

@@ -5,7 +5,7 @@ import type { SyncService } from "../../services/sync.js";
 import type { AppointmentService } from "../../services/appointment.js";
 import { join } from "path";
 import type { Config } from "../../config.js";
-import { GetAppointmentsParamsSchema } from "../../types/appointment.js";
+import { GetAppointmentsParamsSchema, GetBookableItemsParamsSchema } from "../../types/appointment.js";
 
 
 export const syncClientsSchema = z.object({
@@ -15,6 +15,8 @@ export const syncClientsSchema = z.object({
 });
 
 export const getAppointmentsSchema = GetAppointmentsParamsSchema;
+
+export const getBookableItemsSchema = GetBookableItemsParamsSchema;
 
 export const exportSalesHistorySchema = z.object({
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
@@ -250,7 +252,6 @@ export async function handleGetAppointments(
       };
     }
 
-    // Format appointments for display
     const formattedAppointments = appointments.map((apt) => {
       const clientName = apt.client
         ? `${apt.client.firstName || ""} ${apt.client.lastName || ""}`.trim() || "Unknown Client"
@@ -292,6 +293,76 @@ export async function handleGetAppointments(
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       content: [{ type: "text", text: `Error fetching appointments: ${errorMessage}` }],
+    };
+  }
+}
+
+export async function handleGetBookableItems(
+  args: z.infer<typeof getBookableItemsSchema>,
+  appointmentService: AppointmentService
+): Promise<{ content: Array<{ type: string; text: string }> }> {
+  try {
+    const result = await appointmentService.getBookableItems(args);
+
+    const { bookableItems, pagination } = result;
+
+    if (bookableItems.length === 0) {
+      return {
+        content: [{
+          type: "text",
+          text: "No bookable appointment items found for the specified criteria.",
+        }],
+      };
+    }
+
+    const formattedItems = bookableItems.map((item) => {
+      const sessionTypeName = item.sessionType?.name || "No Session Type";
+      const programName = item.program?.name || "No Program";
+
+      const locationNames = item.locations.length > 0
+        ? item.locations.map(loc => loc.name || "Unknown").join(", ")
+        : "No Locations";
+
+      const staffInfo = item.staffMembers.length > 0
+        ? item.staffMembers.map(staff =>
+            `${staff.firstName || ""} ${staff.lastName || ""}`.trim() || "Unknown Staff"
+          )
+        : ["No Staff Available"];
+
+      return {
+        id: item.id,
+        name: item.name || "Unknown Item",
+        sessionType: sessionTypeName,
+        defaultDuration: item.sessionType?.defaultTimeLength
+          ? `${item.sessionType.defaultTimeLength} minutes`
+          : "N/A",
+        pricing: {
+          price: item.pricing?.price ?? "N/A",
+          onlinePrice: item.pricing?.onlinePrice ?? "N/A",
+        },
+        program: programName,
+        locations: locationNames,
+        availableStaff: staffInfo,
+      };
+    });
+
+    let message = `Found ${bookableItems.length} bookable appointment item(s):\n\n`;
+    message += JSON.stringify(formattedItems, null, 2);
+
+    if (pagination) {
+      message += `\n\nPagination Info:\n`;
+      message += `- Showing ${pagination.pageSize} of ${pagination.totalResults} total results\n`;
+      message += `- Current offset: ${pagination.offset}\n`;
+      message += `- Requested limit: ${pagination.limit}`;
+    }
+
+    return {
+      content: [{ type: "text", text: message }],
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{ type: "text", text: `Error fetching bookable items: ${errorMessage}` }],
     };
   }
 }

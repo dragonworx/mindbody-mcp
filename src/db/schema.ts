@@ -70,4 +70,16 @@ CREATE TABLE IF NOT EXISTS cache (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache(expires_at);
+
+CREATE TABLE IF NOT EXISTS bookable_items (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  session_type_id TEXT,
+  program_id TEXT,
+  raw_data JSON,
+  last_synced_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_bookable_items_session_type ON bookable_items(session_type_id);
+CREATE INDEX IF NOT EXISTS idx_bookable_items_program ON bookable_items(program_id);
 `;
