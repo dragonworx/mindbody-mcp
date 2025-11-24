@@ -204,6 +204,91 @@ export class MindbodyApiClient {
   }
 
   /**
+   * Get appointments from Mindbody API with filtering and pagination
+   *
+   * Retrieves appointments for a specified date range with optional
+   * filtering by staff, location, or client. Supports pagination for
+   * large result sets.
+   *
+   * @param params - Query parameters for filtering appointments
+   * @param params.startDate - Start date in YYYY-MM-DD format (required)
+   * @param params.endDate - End date in YYYY-MM-DD format (optional)
+   * @param params.staffIds - Filter by specific staff member IDs (optional)
+   * @param params.locationIds - Filter by specific location IDs (optional)
+   * @param params.clientIds - Filter by specific client IDs (optional)
+   * @param params.limit - Number of results to return (default: 100, max: 200)
+   * @param params.offset - Number of results to skip for pagination (default: 0)
+   * @param params.force - Bypass rate limit checks (default: false)
+   *
+   * @returns Promise resolving to appointments and pagination metadata
+   *
+   * @throws {Error} If API request fails or rate limit is exceeded
+   *
+   * @example
+   * ```typescript
+   * const response = await client.getAppointments({
+   *   startDate: '2024-01-01',
+   *   endDate: '2024-01-31',
+   *   staffIds: ['staff-1'],
+   *   limit: 50,
+   * });
+   * console.log(response.Appointments.length); // Number of appointments
+   * console.log(response.PaginationResponse?.TotalResults); // Total count
+   * ```
+   */
+  async getAppointments(params: {
+    startDate: string;
+    endDate?: string;
+    staffIds?: string[];
+    locationIds?: string[];
+    clientIds?: string[];
+    limit?: number;
+    offset?: number;
+    force?: boolean;
+  }): Promise<{
+    Appointments: Array<{
+      Id: string;
+      StartDateTime: string;
+      EndDateTime: string;
+      ClientId?: string;
+      StaffId?: string;
+      LocationId?: string;
+      SessionTypeId?: string;
+      Status?: string;
+      [key: string]: unknown;
+    }>;
+    PaginationResponse?: {
+      RequestedLimit: number;
+      RequestedOffset: number;
+      PageSize: number;
+      TotalResults: number;
+    };
+  }> {
+    const queryParams: Record<string, string | number | boolean | undefined> = {
+      StartDate: params.startDate,
+      EndDate: params.endDate,
+      limit: params.limit ?? 100,
+      offset: params.offset ?? 0,
+    };
+
+    if (params.staffIds && params.staffIds.length > 0) {
+      queryParams.StaffIds = params.staffIds.join(",");
+    }
+    if (params.locationIds && params.locationIds.length > 0) {
+      queryParams.LocationIds = params.locationIds.join(",");
+    }
+    if (params.clientIds && params.clientIds.length > 0) {
+      queryParams.ClientIds = params.clientIds.join(",");
+    }
+
+    return this.request({
+      endpoint: "/appointment/appointments",
+      params: queryParams,
+      force: params.force,
+    });
+  }
+
+  /**
    * Get rate limit guard for external use
    */
   getRateLimitGuard(): RateLimitGuard {

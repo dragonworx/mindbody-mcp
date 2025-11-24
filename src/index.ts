@@ -13,15 +13,18 @@ import { DatabaseClient } from "./db/client.js";
 import { MindbodyApiClient } from "./services/mindbody.js";
 import { RateLimitGuard } from "./services/rateLimit.js";
 import { SyncService } from "./services/sync.js";
+import { AppointmentService } from "./services/appointment.js";
 import {
   syncClientsSchema,
   exportSalesHistorySchema,
   analyzeFormulaNotesSchema,
   writeClientProfileSchema,
+  getAppointmentsSchema,
   handleSyncClients,
   handleExportSalesHistory,
   handleAnalyzeFormulaNotes,
   handleWriteClientProfile,
+  handleGetAppointments,
 } from "./mcp/tools/index.js";
 import {
   getQuotaStatus,
@@ -45,6 +48,7 @@ async function main(): Promise<void> {
   const rateLimitGuard = new RateLimitGuard(db, config);
   const apiClient = new MindbodyApiClient(config, rateLimitGuard);
   const syncService = new SyncService(apiClient, db);
+  const appointmentService = new AppointmentService(apiClient, db);
 
   // Create MCP server
   const server = new Server(
@@ -171,6 +175,60 @@ async function main(): Promise<void> {
             required: ["client_id", "data"],
           },
         },
+        {
+          name: "get_appointments",
+          description:
+            "Retrieves appointments from Mindbody with filtering options. Supports date range, staff, location, and client filtering. Results are cached for 1 hour to minimize API calls.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              startDate: {
+                type: "string",
+                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                description: "Start date in YYYY-MM-DD format (required)",
+              },
+              endDate: {
+                type: "string",
+                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                description: "End date in YYYY-MM-DD format (optional)",
+              },
+              staffIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "Filter by specific staff IDs (optional)",
+              },
+              locationIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "Filter by specific location IDs (optional)",
+              },
+              clientIds: {
+                type: "array",
+                items: { type: "string" },
+                description: "Filter by specific client IDs (optional)",
+              },
+              limit: {
+                type: "number",
+                minimum: 1,
+                maximum: 200,
+                default: 100,
+                description: "Number of results to return (default: 100, max: 200)",
+              },
+              offset: {
+                type: "number",
+                minimum: 0,
+                default: 0,
+                description: "Number of results to skip for pagination",
+              },
+              force: {
+                type: "boolean",
+                default: false,
+                description: "Override cache and rate limit checks",
+              },
+            },
+            required: ["startDate"],
+          },
+        },
       ],
     };
   });
@@ -193,6 +251,10 @@ async function main(): Promise<void> {
         case "write_client_profile": {
           const args = writeClientProfileSchema.parse(request.params.arguments);
           return await handleWriteClientProfile(args, apiClient);
+        }
+        case "get_appointments": {
+          const args = getAppointmentsSchema.parse(request.params.arguments);
+          return await handleGetAppointments(args, appointmentService);
         }
         default:
           throw new Error(`Unknown tool: ${request.params.name}`);

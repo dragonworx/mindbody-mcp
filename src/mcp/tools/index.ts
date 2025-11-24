@@ -2,8 +2,10 @@ import { z } from "zod";
 import type { MindbodyApiClient } from "../../services/mindbody.js";
 import type { DatabaseClient } from "../../db/client.js";
 import type { SyncService } from "../../services/sync.js";
+import type { AppointmentService } from "../../services/appointment.js";
 import { join } from "path";
 import type { Config } from "../../config.js";
+import { GetAppointmentsParamsSchema } from "../../types/appointment.js";
 
 /**
  * Tool definitions for the MCP server
@@ -14,6 +16,8 @@ export const syncClientsSchema = z.object({
   since_date: z.string().optional().describe("ISO date string for delta syncs"),
   force: z.boolean().default(false).describe("Override rate limit checks"),
 });
+
+export const getAppointmentsSchema = GetAppointmentsParamsSchema;
 
 export const exportSalesHistorySchema = z.object({
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
@@ -230,6 +234,70 @@ export async function handleWriteClientProfile(
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       content: [{ type: "text", text: `Error updating client profile: ${errorMessage}` }],
+    };
+  }
+}
+
+export async function handleGetAppointments(
+  args: z.infer<typeof getAppointmentsSchema>,
+  appointmentService: AppointmentService
+): Promise<{ content: Array<{ type: string; text: string }> }> {
+  try {
+    const result = await appointmentService.getAppointments(args);
+
+    const { appointments, pagination } = result;
+
+    if (appointments.length === 0) {
+      return {
+        content: [{
+          type: "text",
+          text: "No appointments found for the specified criteria.",
+        }],
+      };
+    }
+
+    // Format appointments for display
+    const formattedAppointments = appointments.map((apt) => {
+      const clientName = apt.client
+        ? `${apt.client.firstName || ""} ${apt.client.lastName || ""}`.trim() || "Unknown Client"
+        : "No Client";
+
+      const staffName = apt.staff
+        ? `${apt.staff.firstName || ""} ${apt.staff.lastName || ""}`.trim() || "Unknown Staff"
+        : "No Staff";
+
+      const location = apt.location?.name || "No Location";
+      const sessionType = apt.sessionType?.name || "No Type";
+
+      return {
+        id: apt.id,
+        startDateTime: apt.startDateTime,
+        endDateTime: apt.endDateTime,
+        client: clientName,
+        staff: staffName,
+        location,
+        sessionType,
+        status: apt.status || "Unknown",
+      };
+    });
+
+    let message = `Found ${appointments.length} appointment(s):\n\n`;
+    message += JSON.stringify(formattedAppointments, null, 2);
+
+    if (pagination) {
+      message += `\n\nPagination Info:\n`;
+      message += `- Showing ${pagination.pageSize} of ${pagination.totalResults} total results\n`;
+      message += `- Current offset: ${pagination.offset}\n`;
+      message += `- Requested limit: ${pagination.limit}`;
+    }
+
+    return {
+      content: [{ type: "text", text: message }],
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{ type: "text", text: `Error fetching appointments: ${errorMessage}` }],
     };
   }
 }
