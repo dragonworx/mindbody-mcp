@@ -1,6 +1,3 @@
-/**
- * SQLite database schema for caching Mindbody data
- */
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS clients (

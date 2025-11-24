@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-/**
- * Environment configuration schema with strict validation
- */
 const envSchema = z.object({
   // Mindbody Developer Credentials
   MBO_API_KEY: z.string().min(1, "Mindbody API key is required"),
@@ -21,10 +18,6 @@ const envSchema = z.object({
 
 export type Config = z.infer<typeof envSchema>;
 
-/**
- * Validates and loads environment configuration
- * @throws {Error} If validation fails
- */
 export function loadConfig(): Config {
   try {
     const config = envSchema.parse(process.env);
@@ -38,7 +31,4 @@ export function loadConfig(): Config {
   }
 }
 
-/**
- * Mindbody API base URL
- */
 export const MINDBODY_API_BASE = "https://api.mindbodyonline.com/public/v6";

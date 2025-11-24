@@ -7,9 +7,6 @@ import { join } from "path";
 import type { Config } from "../../config.js";
 import { GetAppointmentsParamsSchema } from "../../types/appointment.js";
 
-/**
- * Tool definitions for the MCP server
- */
 
 export const syncClientsSchema = z.object({
   status: z.enum(["Active", "Inactive", "All"]).default("Active"),
@@ -38,9 +35,6 @@ export const writeClientProfileSchema = z.object({
   force: z.boolean().default(false).describe("Override rate limit checks"),
 });
 
-/**
- * Tool handlers
- */
 
 export async function handleSyncClients(
   args: z.infer<typeof syncClientsSchema>,

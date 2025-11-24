@@ -1,10 +1,6 @@
 import type { MindbodyApiClient } from "../../services/mindbody.js";
 import type { DatabaseClient } from "../../db/client.js";
 
-/**
- * Resource handlers for the MCP server
- * Resources provide read-only context to the AI
- */
 
 export interface ResourceContent {
   uri: string;
@@ -12,9 +8,6 @@ export interface ResourceContent {
   text: string;
 }
 
-/**
- * Get API quota status
- */
 export function getQuotaStatus(apiClient: MindbodyApiClient): ResourceContent {
   const stats = apiClient.getRateLimitGuard().getUsageStats();
 
@@ -35,9 +28,6 @@ export function getQuotaStatus(apiClient: MindbodyApiClient): ResourceContent {
   };
 }
 
-/**
- * Get sync logs
- */
 export function getSyncLogs(db: DatabaseClient, limit = 50): ResourceContent {
   const logs = db.getSyncLogs(limit);
 
@@ -59,9 +49,6 @@ export function getSyncLogs(db: DatabaseClient, limit = 50): ResourceContent {
   };
 }
 
-/**
- * Get cache summary
- */
 export function getCacheSummary(db: DatabaseClient): ResourceContent {
   const summary = db.getCacheSummary();
 
@@ -83,9 +70,6 @@ export function getCacheSummary(db: DatabaseClient): ResourceContent {
   };
 }
 
-/**
- * List all available resources
- */
 export function listResources(): Array<{
   uri: string;
   name: string;

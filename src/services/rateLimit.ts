@@ -1,28 +1,17 @@
 import type { DatabaseClient } from "../db/client.js";
 import type { Config } from "../config.js";
 
-/**
- * Rate limiting guard to prevent exceeding Mindbody's API limits
- */
 export class RateLimitGuard {
   constructor(
     private db: DatabaseClient,
     private config: Config
   ) {}
 
-  /**
-   * Get today's date in YYYY-MM-DD format
-   */
   private getTodayDate(): string {
     const now = new Date();
     return now.toISOString().split("T")[0] as string;
   }
 
-  /**
-   * Check if we can make an API call
-   * @param force Override the rate limit check
-   * @throws {Error} If rate limit exceeded and force is false
-   */
   async checkLimit(force = false): Promise<void> {
     const today = this.getTodayDate();
     const currentUsage = this.db.getApiUsage(today);
@@ -39,17 +28,11 @@ export class RateLimitGuard {
     }
   }
 
-  /**
-   * Record an API call
-   */
   recordCall(): void {
     const today = this.getTodayDate();
     this.db.incrementApiUsage(today);
   }
 
-  /**
-   * Get current usage stats
-   */
   getUsageStats(): {
     callsMade: number;
     limit: number;
@@ -75,9 +58,6 @@ export class RateLimitGuard {
     };
   }
 
-  /**
-   * Check if we're approaching the limit (80% threshold)
-   */
   isApproachingLimit(): boolean {
     const today = this.getTodayDate();
     const currentUsage = this.db.getApiUsage(today);

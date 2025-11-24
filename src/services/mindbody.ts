@@ -39,9 +39,6 @@ interface PaginatedResponse<T> {
   [key: string]: T[] | unknown;
 }
 
-/**
- * Mindbody API client with automatic authentication and rate limiting
- */
 export class MindbodyApiClient {
   private authService: AuthService;
   private rateLimitGuard: RateLimitGuard;
@@ -55,9 +52,6 @@ export class MindbodyApiClient {
     this.rateLimitGuard = rateLimitGuard;
   }
 
-  /**
-   * Make an authenticated request to the Mindbody API
-   */
   private async request<T>(options: MindbodyRequestOptions): Promise<T> {
     const { method = "GET", endpoint, params, body, force = false } = options;
 
@@ -126,9 +120,6 @@ export class MindbodyApiClient {
     return await response.json() as T;
   }
 
-  /**
-   * Get clients with pagination
-   */
   async getClients(params: {
     limit?: number;
     offset?: number;
@@ -146,9 +137,6 @@ export class MindbodyApiClient {
     });
   }
 
-  /**
-   * Get sales data with pagination
-   */
   async getSales(params: {
     startDate: string;
     endDate: string;
@@ -168,9 +156,6 @@ export class MindbodyApiClient {
     });
   }
 
-  /**
-   * Get client formula notes
-   */
   async getClientFormulaNotes(params: {
     clientIds: string[];
     force?: boolean;
@@ -184,9 +169,6 @@ export class MindbodyApiClient {
     });
   }
 
-  /**
-   * Update a client profile
-   */
   async updateClient(params: {
     clientId: string;
     data: Record<string, unknown>;
@@ -203,39 +185,6 @@ export class MindbodyApiClient {
     });
   }
 
-  /**
-   * Get appointments from Mindbody API with filtering and pagination
-   *
-   * Retrieves appointments for a specified date range with optional
-   * filtering by staff, location, or client. Supports pagination for
-   * large result sets.
-   *
-   * @param params - Query parameters for filtering appointments
-   * @param params.startDate - Start date in YYYY-MM-DD format (required)
-   * @param params.endDate - End date in YYYY-MM-DD format (optional)
-   * @param params.staffIds - Filter by specific staff member IDs (optional)
-   * @param params.locationIds - Filter by specific location IDs (optional)
-   * @param params.clientIds - Filter by specific client IDs (optional)
-   * @param params.limit - Number of results to return (default: 100, max: 200)
-   * @param params.offset - Number of results to skip for pagination (default: 0)
-   * @param params.force - Bypass rate limit checks (default: false)
-   *
-   * @returns Promise resolving to appointments and pagination metadata
-   *
-   * @throws {Error} If API request fails or rate limit is exceeded
-   *
-   * @example
-   * ```typescript
-   * const response = await client.getAppointments({
-   *   startDate: '2024-01-01',
-   *   endDate: '2024-01-31',
-   *   staffIds: ['staff-1'],
-   *   limit: 50,
-   * });
-   * console.log(response.Appointments.length); // Number of appointments
-   * console.log(response.PaginationResponse?.TotalResults); // Total count
-   * ```
-   */
   async getAppointments(params: {
     startDate: string;
     endDate?: string;
@@ -288,9 +237,6 @@ export class MindbodyApiClient {
     });
   }
 
-  /**
-   * Get rate limit guard for external use
-   */
   getRateLimitGuard(): RateLimitGuard {
     return this.rateLimitGuard;
   }

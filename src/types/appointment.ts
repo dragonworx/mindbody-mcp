@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-/**
- * Mindbody API appointment response structure
- */
 export interface MindbodyAppointment {
   Id: string;
   StartDateTime: string;
@@ -34,9 +31,6 @@ export interface MindbodyAppointment {
   [key: string]: unknown;
 }
 
-/**
- * Normalized appointment structure for internal use
- */
 export interface Appointment {
   id: string;
   startDateTime: string;
@@ -69,14 +63,6 @@ export interface Appointment {
   lastSyncedAt: string;
 }
 
-/**
- * Zod schema for validating appointment query parameters
- *
- * Validates all parameters for getting appointments including:
- * - Date formats (YYYY-MM-DD)
- * - Pagination limits (1-200)
- * - Filter arrays (staff, location, client IDs)
- */
 export const GetAppointmentsParamsSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
@@ -90,9 +76,6 @@ export const GetAppointmentsParamsSchema = z.object({
 
 export type GetAppointmentsParams = z.infer<typeof GetAppointmentsParamsSchema>;
 
-/**
- * Paginated response from Mindbody API
- */
 export interface PaginatedAppointmentResponse {
   Appointments: MindbodyAppointment[];
   PaginationResponse?: {
@@ -103,27 +86,6 @@ export interface PaginatedAppointmentResponse {
   };
 }
 
-/**
- * Transform Mindbody API appointment response to internal format
- *
- * Converts PascalCase Mindbody fields to camelCase and normalizes
- * nested objects. Handles missing/null fields gracefully.
- *
- * @param mbAppointment - Raw appointment from Mindbody API
- * @returns Normalized appointment with all fields in camelCase
- *
- * @example
- * ```typescript
- * const mbApt = {
- *   Id: "123",
- *   StartDateTime: "2024-01-15T10:00:00Z",
- *   // ... other fields
- * };
- * const normalized = transformAppointment(mbApt);
- * console.log(normalized.id); // "123"
- * console.log(normalized.startDateTime); // "2024-01-15T10:00:00Z"
- * ```
- */
 export function transformAppointment(mbAppointment: MindbodyAppointment): Appointment {
   return {
     id: mbAppointment.Id,

@@ -8,10 +8,6 @@ interface UserTokenResponse {
   RefreshToken?: string;
 }
 
-/**
- * Authentication service for managing Mindbody API tokens
- * Handles automatic token rotation and caching
- */
 export class AuthService {
   private userToken: string | null = null;
   private tokenExpiry: Date | null = null;
@@ -21,9 +17,6 @@ export class AuthService {
     this.fetchFn = fetchFn || fetch;
   }
 
-  /**
-   * Get a valid user token, refreshing if necessary
-   */
   async getUserToken(): Promise<string> {
     // Check if we have a valid cached token
     if (this.userToken && this.tokenExpiry && this.tokenExpiry > new Date()) {
@@ -40,9 +33,6 @@ export class AuthService {
     return this.userToken;
   }
 
-  /**
-   * Issue a new user token from Mindbody API
-   */
   private async issueNewToken(): Promise<void> {
     try {
       const response = await this.fetchFn(`${MINDBODY_API_BASE}/usertoken/issue`, {
@@ -80,17 +70,11 @@ export class AuthService {
     }
   }
 
-  /**
-   * Invalidate the current token (forces refresh on next request)
-   */
   invalidateToken(): void {
     this.userToken = null;
     this.tokenExpiry = null;
   }
 
-  /**
-   * Check if we have a valid token cached
-   */
   hasValidToken(): boolean {
     return Boolean(this.userToken && this.tokenExpiry && this.tokenExpiry > new Date());
   }

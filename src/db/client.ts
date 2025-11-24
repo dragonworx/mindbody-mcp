@@ -3,9 +3,6 @@ import { SCHEMA_SQL } from "./schema.js";
 import type { Config } from "../config.js";
 import { join } from "path";
 
-/**
- * Database client for managing local cache
- */
 export class DatabaseClient {
   private db: Database;
 
@@ -23,9 +20,6 @@ export class DatabaseClient {
     this.db.exec(SCHEMA_SQL);
   }
 
-  /**
-   * Save or update a client in the cache
-   */
   saveClient(client: {
     id: string;
     firstName?: string;
@@ -56,9 +50,6 @@ export class DatabaseClient {
     );
   }
 
-  /**
-   * Save multiple clients in a transaction
-   */
   saveClients(clients: Array<{
     id: string;
     firstName?: string;
@@ -74,9 +65,6 @@ export class DatabaseClient {
     })();
   }
 
-  /**
-   * Get all cached clients
-   */
   getClients(status?: string): Array<{
     id: string;
     firstName: string | null;
@@ -109,9 +97,6 @@ export class DatabaseClient {
     }>;
   }
 
-  /**
-   * Save a sale record
-   */
   saveSale(sale: {
     id: string;
     saleDate: string;
@@ -139,9 +124,6 @@ export class DatabaseClient {
     );
   }
 
-  /**
-   * Save multiple sales in a transaction
-   */
   saveSales(sales: Array<{
     id: string;
     saleDate: string;
@@ -156,17 +138,11 @@ export class DatabaseClient {
     })();
   }
 
-  /**
-   * Get API usage for a specific date
-   */
   getApiUsage(date: string): number {
     const result = this.db.query("SELECT count FROM api_usage WHERE date = ?").get(date) as { count: number } | null;
     return result?.count ?? 0;
   }
 
-  /**
-   * Increment API usage counter for today
-   */
   incrementApiUsage(date: string): void {
     this.db.prepare(`
       INSERT INTO api_usage (date, count)
@@ -175,9 +151,6 @@ export class DatabaseClient {
     `).run(date);
   }
 
-  /**
-   * Add a sync log entry
-   */
   addSyncLog(log: {
     operation: string;
     status: "success" | "error" | "warning";
@@ -195,9 +168,6 @@ export class DatabaseClient {
     );
   }
 
-  /**
-   * Get recent sync logs
-   */
   getSyncLogs(limit = 50): Array<{
     id: number;
     timestamp: string;
@@ -221,9 +191,6 @@ export class DatabaseClient {
     }>;
   }
 
-  /**
-   * Get cache summary statistics
-   */
   getCacheSummary(): {
     clients: number;
     sales: number;
@@ -240,9 +207,6 @@ export class DatabaseClient {
     };
   }
 
-  /**
-   * Close the database connection
-   */
   close(): void {
     this.db.close();
   }

@@ -33,9 +33,6 @@ import {
   listResources,
 } from "./mcp/resources/index.js";
 
-/**
- * Main entry point for the Mindbody MCP Server
- */
 async function main(): Promise<void> {
   // Load and validate configuration
   const config = loadConfig();

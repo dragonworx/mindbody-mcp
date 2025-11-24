@@ -9,14 +9,8 @@ import {
   GetAppointmentsParamsSchema,
 } from "../types/appointment.js";
 
-/**
- * Cache TTL for appointments (1 hour)
- */
 const CACHE_TTL_SECONDS = 3600;
 
-/**
- * Generate a cache key for appointment queries
- */
 function generateCacheKey(params: GetAppointmentsParams): string {
   const parts = [
     `appointments`,
@@ -31,30 +25,12 @@ function generateCacheKey(params: GetAppointmentsParams): string {
   return parts.join(":");
 }
 
-/**
- * Service for managing appointments with caching
- */
 export class AppointmentService {
   constructor(
     private apiClient: MindbodyApiClient,
     private db: DatabaseClient
   ) {}
 
-  /**
-   * Get appointments from cache or API
-   *
-   * @param params - Filter parameters for appointments
-   * @returns Array of appointments with client, staff, and service details
-   *
-   * @example
-   * ```typescript
-   * const appointments = await service.getAppointments({
-   *   startDate: '2024-01-01',
-   *   endDate: '2024-01-31',
-   *   limit: 50,
-   * });
-   * ```
-   */
   async getAppointments(params: GetAppointmentsParams): Promise<{
     appointments: Appointment[];
     pagination?: {
@@ -107,9 +83,6 @@ export class AppointmentService {
     return result;
   }
 
-  /**
-   * Get appointments from cache
-   */
   private async getFromCache(params: GetAppointmentsParams): Promise<{
     appointments: Appointment[];
     pagination?: {
@@ -143,9 +116,6 @@ export class AppointmentService {
     return JSON.parse(cached.value);
   }
 
-  /**
-   * Store result in cache
-   */
   private async setCache(
     params: GetAppointmentsParams,
     result: {
@@ -168,9 +138,6 @@ export class AppointmentService {
     ).run(cacheKey, value, expiresAt, Date.now());
   }
 
-  /**
-   * Store appointments in database
-   */
   private async storeAppointments(appointments: Appointment[]): Promise<void> {
     const stmt = this.db.db.prepare(
       `INSERT OR REPLACE INTO appointments
@@ -195,9 +162,6 @@ export class AppointmentService {
     }
   }
 
-  /**
-   * Clear appointment cache (useful after booking/canceling appointments)
-   */
   async clearCache(pattern?: string): Promise<number> {
     if (pattern) {
       const result = this.db.db.prepare(
@@ -212,9 +176,6 @@ export class AppointmentService {
     }
   }
 
-  /**
-   * Prune expired cache entries
-   */
   async pruneCache(): Promise<number> {
     const result = this.db.db.prepare(
       `DELETE FROM cache WHERE expires_at < ?`

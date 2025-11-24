@@ -1,18 +1,12 @@
 import type { MindbodyApiClient } from "./mindbody.js";
 import type { DatabaseClient } from "../db/client.js";
 
-/**
- * Sync orchestrator for handling pagination and batch operations
- */
 export class SyncService {
   constructor(
     private apiClient: MindbodyApiClient,
     private db: DatabaseClient
   ) {}
 
-  /**
-   * Sync all clients from Mindbody to local cache
-   */
   async syncClients(params: {
     status?: "Active" | "Inactive" | "All";
     sinceDate?: string;
@@ -115,9 +109,6 @@ export class SyncService {
     }
   }
 
-  /**
-   * Sync sales data for a date range, automatically chunking if needed
-   */
   async syncSales(params: {
     startDate: string;
     endDate: string;
@@ -231,9 +222,6 @@ export class SyncService {
     }
   }
 
-  /**
-   * Split a date range into smaller chunks
-   */
   private chunkDateRange(
     startDate: string,
     endDate: string,
