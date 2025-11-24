@@ -1,0 +1,16 @@
+[
+  {
+    "id": "sale-1",
+    "saleDate": "2024-01-01",
+    "clientId": "client-1",
+    "totalAmount": 100,
+    "test": "data1"
+  },
+  {
+    "id": "sale-2",
+    "saleDate": "2024-01-02",
+    "clientId": "client-2",
+    "totalAmount": 200,
+    "test": "data2"
+  }
+]

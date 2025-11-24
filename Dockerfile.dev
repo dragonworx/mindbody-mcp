@@ -1,0 +1,16 @@
+FROM oven/bun:1-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json bun.lockb ./
+RUN bun install
+
+# Copy source code
+COPY . .
+
+# Expose port if using SSE (Optional)
+EXPOSE 3000
+
+# Run in watch mode for hot-reloading
+CMD ["bun", "run", "--watch", "src/index.ts"]

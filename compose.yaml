@@ -1,0 +1,30 @@
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./src:/app/src       # Hot reloading for source code
+      - ./data:/app/data     # Persist SQLite & Exports
+      - ./.env:/app/.env     # Environment config
+    environment:
+      - FORCE_COLOR=1
+    stdin_open: true         # Critical for Stdio transport
+    tty: true
+    restart: unless-stopped
+
+# Production service (optional)
+  mcp-server-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data     # Persist SQLite & Exports
+      - ./.env:/app/.env     # Environment config
+    environment:
+      - FORCE_COLOR=1
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    profiles:
+      - production
