@@ -3,9 +3,9 @@ import { z } from "zod";
 const envSchema = z.object({
   // Mindbody Developer Credentials
   MBO_API_KEY: z.string().min(1, "Mindbody API key is required"),
-  MBO_SITE_ID: z.string().min(1, "Mindbody Site ID is required"),
-  MBO_STAFF_USERNAME: z.string().min(1, "Staff username is required"),
-  MBO_STAFF_PASSWORD: z.string().min(1, "Staff password is required"),
+  MBO_SITE_ID: z.string().min(1, "Mindbody Site ID is required").default("-99"),
+  MBO_STAFF_USERNAME: z.string().min(1, "Staff username is required").default("Siteowner"),
+  MBO_STAFF_PASSWORD: z.string().min(1, "Staff password is required").default("apitest1234"),
 
   // Server Config
   MCP_SERVER_NAME: z.string().default("mindbody-migrator"),

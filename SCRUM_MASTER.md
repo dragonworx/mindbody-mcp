@@ -33,6 +33,7 @@
 
 1. **NO GIT OPERATIONS**: Do not stage, commit, or perform any git operations. The developer will handle all version control.
 2. **NO JSDOC COMMENTS**: Do not add JSDoc comments to any code. This codebase is designed for rapid refactoring and human-readable documentation wastes tokens and time.
+3. **ALWAYS REFERENCE API SPEC**: When implementing any Mindbody API endpoint, you MUST consult `api-specs/mindbody-public-api-v6.json` for correct endpoint paths, parameters, and response structures. This is critical for functionality.
 
 ### Start Here: Working on This Project
 
@@ -424,8 +425,26 @@ bun test --watch
 
 Current working version: **v6**
 
+**CRITICAL: API Specification Reference**
+
+When implementing ANY endpoint logic, you MUST reference the official API specification:
+- **File Location:** `api-specs/mindbody-public-api-v6.json`
+- **Purpose:** Ensures correct endpoint paths, request parameters, response structures, and data types
+- **Requirement:** All adapters, types, and service implementations MUST match the spec exactly
+
+**Rule:** Before implementing any Mindbody API endpoint, consult `api-specs/mindbody-public-api-v6.json` to verify:
+- Correct endpoint URL and HTTP method
+- Required vs optional parameters
+- Request body structure and data types
+- Response structure and field names
+- Error response formats
+- Authentication requirements
+
 **File Structure:**
 ```
+api-specs/
+  └── mindbody-public-api-v6.json  # Official API specification (REFERENCE THIS!)
+
 src/adapters/mindbody/
   ├── interface.ts          # IMindbodyAPIAdapter
   ├── factory.ts            # MindbodyAPIFactory

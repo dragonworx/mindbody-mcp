@@ -219,7 +219,7 @@ export class MindbodyApiClient {
     }
 
     return this.request({
-      endpoint: "/appointment/appointments",
+      endpoint: "/appointment/staffappointments",
       params: queryParams,
       force: params.force,
     });
