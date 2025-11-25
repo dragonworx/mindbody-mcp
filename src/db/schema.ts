@@ -82,4 +82,16 @@ CREATE TABLE IF NOT EXISTS bookable_items (
 
 CREATE INDEX IF NOT EXISTS idx_bookable_items_session_type ON bookable_items(session_type_id);
 CREATE INDEX IF NOT EXISTS idx_bookable_items_program ON bookable_items(program_id);
+
+CREATE TABLE IF NOT EXISTS api_response_cache (
+  cache_key TEXT PRIMARY KEY,
+  endpoint TEXT NOT NULL,
+  params TEXT NOT NULL,
+  response TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  hit_count INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_cache_endpoint ON api_response_cache(endpoint);
+CREATE INDEX IF NOT EXISTS idx_api_cache_created ON api_response_cache(created_at);
 `;

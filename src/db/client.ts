@@ -72,29 +72,34 @@ export class DatabaseClient {
     email: string | null;
     status: string | null;
     lastSyncedAt: string;
+    rawData: unknown;
   }> {
-    let query = "SELECT id, first_name, last_name, email, status, last_synced_at FROM clients";
+    let query = "SELECT id, first_name, last_name, email, status, last_synced_at, raw_data FROM clients";
 
-    if (status) {
-      query += " WHERE status = ?";
-      return this.db.query(query).all(status) as Array<{
-        id: string;
-        first_name: string | null;
-        last_name: string | null;
-        email: string | null;
-        status: string | null;
-        last_synced_at: string;
-      }>;
-    }
-
-    return this.db.query(query).all() as Array<{
+    type DbRow = {
       id: string;
       first_name: string | null;
       last_name: string | null;
       email: string | null;
       status: string | null;
       last_synced_at: string;
-    }>;
+      raw_data: string;
+    };
+
+    const rows: DbRow[] = status
+      ? (this.db.query(query + " WHERE status = ?").all(status) as DbRow[])
+      : (this.db.query(query).all() as DbRow[]);
+
+    // Map snake_case to camelCase and parse raw_data JSON
+    return rows.map(row => ({
+      id: row.id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      email: row.email,
+      status: row.status,
+      lastSyncedAt: row.last_synced_at,
+      rawData: JSON.parse(row.raw_data),
+    }));
   }
 
   saveSale(sale: {

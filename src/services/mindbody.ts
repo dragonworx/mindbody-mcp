@@ -2,6 +2,7 @@ import type { Config } from "../config.js";
 import { MINDBODY_API_BASE } from "../config.js";
 import { AuthService } from "./auth.js";
 import { RateLimitGuard } from "./rateLimit.js";
+import type { ApiResponseCache } from "./apiResponseCache.js";
 import type {
   MindbodyAppointment,
   PaginatedAppointmentResponse,
@@ -48,18 +49,29 @@ interface PaginatedResponse<T> {
 export class MindbodyApiClient {
   private authService: AuthService;
   private rateLimitGuard: RateLimitGuard;
+  private cache?: ApiResponseCache;
 
   constructor(
     config: Config,
     rateLimitGuard: RateLimitGuard,
-    authService?: AuthService
+    authService?: AuthService,
+    cache?: ApiResponseCache
   ) {
     this.authService = authService || new AuthService(config);
     this.rateLimitGuard = rateLimitGuard;
+    this.cache = cache;
   }
 
   private async request<T>(options: MindbodyRequestOptions): Promise<T> {
     const { method = "GET", endpoint, params, body, force = false } = options;
+
+    // Check cache for GET requests (unless force is true)
+    if (method === "GET" && !force && this.cache && params) {
+      const cached = this.cache.get<T>(endpoint, params as Record<string, unknown>);
+      if (cached) {
+        return cached;
+      }
+    }
 
     // Check rate limit
     await this.rateLimitGuard.checkLimit(force);
@@ -115,7 +127,14 @@ export class MindbodyApiClient {
         throw new Error(`API request failed after retry: ${retryResponse.status} - ${errorText}`);
       }
 
-      return await retryResponse.json() as T;
+      const retryData = await retryResponse.json() as T;
+
+      // Cache GET requests after retry
+      if (method === "GET" && this.cache && params) {
+        this.cache.set(endpoint, params as Record<string, unknown>, retryData);
+      }
+
+      return retryData;
     }
 
     if (!response.ok) {
@@ -123,7 +142,14 @@ export class MindbodyApiClient {
       throw new Error(`API request failed: ${response.status} - ${errorText}`);
     }
 
-    return await response.json() as T;
+    const data = await response.json() as T;
+
+    // Cache GET requests
+    if (method === "GET" && this.cache && params) {
+      this.cache.set(endpoint, params as Record<string, unknown>, data);
+    }
+
+    return data;
   }
 
   async getClients(params: {

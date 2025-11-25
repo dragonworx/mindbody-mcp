@@ -9,10 +9,17 @@
     "start": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "inspect": "bun run src/index.ts",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
+    "test": "bun test src/__tests__/*.test.ts src/services/*.test.ts",
+    "test:unit": "bun test src/__tests__/*.test.ts src/services/*.test.ts",
+    "test:integration": "bun test src/__tests__/integration/*.test.ts",
+    "test:integration:clients": "bun test src/__tests__/integration/client-sync.test.ts",
+    "test:integration:appointments": "bun test src/__tests__/integration/appointments.test.ts",
+    "test:integration:sales": "bun test src/__tests__/integration/sales-export.test.ts",
+    "test:all": "bun run test:unit && bun run test:integration",
+    "test:watch": "bun test --watch src/__tests__/*.test.ts src/services/*.test.ts",
     "test:coverage": "bun test --coverage",
-    "test:connectivity": "bun run src/test-connectivity.ts"
+    "test:connectivity": "bun run src/test-connectivity.ts",
+    "test:clear-cache": "bun run scripts/clear-test-cache.ts"
   },
   "keywords": [
     "mcp",

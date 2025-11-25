@@ -163,7 +163,6 @@ async function testConfiguration(): Promise<boolean> {
 }
 
 async function testAuthentication(
-  config: Config,
   authService: AuthService
 ): Promise<boolean> {
   logSection("2. Authentication");
@@ -206,7 +205,7 @@ async function testRateLimit(rateLimitGuard: RateLimitGuard): Promise<boolean> {
       logInfo(`  Daily limit: ${stats.limit}`);
       logInfo(`  Reset time: ${new Date(stats.resetTime).toLocaleString()}`);
 
-      if (stats.isApproachingLimit) {
+      if (rateLimitGuard.isApproachingLimit()) {
         logWarning("  Approaching daily API limit (>80%)");
       }
 
@@ -234,26 +233,35 @@ async function testReadOperations(
   // Test 1: Get Clients
   const clientsTest = await runTest("Read Operations", "GET /client/clients", async () => {
     try {
-      const response = await apiClient.getClients({ limit: 5, offset: 0 }, true);
+      const response = await apiClient.getClients({ limit: 5, offset: 0, force: true });
 
-      if (!response || !response.Clients) {
+      const clients = response.Clients as Array<{
+        Id: string;
+        FirstName?: string;
+        LastName?: string;
+        Email?: string;
+      }>;
+
+      if (!response || !clients) {
         return {
           success: false,
           error: "Invalid response structure",
         };
       }
 
-      logInfo(`  Retrieved ${response.Clients.length} client(s)`);
-      if (response.Clients.length > 0) {
-        const firstClient = response.Clients[0];
-        logInfo(`  First client: ${firstClient.FirstName} ${firstClient.LastName} (ID: ${firstClient.Id})`);
+      logInfo(`  Retrieved ${clients.length} client(s)`);
+      if (clients.length > 0) {
+        const firstClient = clients[0];
+        if (firstClient) {
+          logInfo(`  First client: ${firstClient.FirstName} ${firstClient.LastName} (ID: ${firstClient.Id})`);
+        }
       }
 
       return {
         success: true,
         details: {
-          count: response.Clients.length,
-          hasMore: response.PaginationResponse?.TotalResults > response.Clients.length,
+          count: clients.length,
+          hasMore: (response.PaginationResponse?.TotalResults ?? 0) > clients.length,
           totalResults: response.PaginationResponse?.TotalResults,
         },
       };
@@ -270,10 +278,10 @@ async function testReadOperations(
   const appointmentsTest = await runTest("Read Operations", "GET /appointment/appointments", async () => {
     try {
       // Get appointments for the next 7 days
-      const startDate = new Date().toISOString().split("T")[0];
+      const startDate = new Date().toISOString().split("T")[0] as string;
       const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         .toISOString()
-        .split("T")[0];
+        .split("T")[0] as string;
 
       const response = await appointmentService.getAppointments({
         startDate,
@@ -288,7 +296,9 @@ async function testReadOperations(
 
       if (response.appointments.length > 0) {
         const first = response.appointments[0];
-        logInfo(`  First appointment: ${first.sessionType?.name || "N/A"} on ${first.startDateTime}`);
+        if (first) {
+          logInfo(`  First appointment: ${first.sessionType?.name || "N/A"} on ${first.startDateTime}`);
+        }
       }
 
       return {
@@ -320,7 +330,10 @@ async function testReadOperations(
 
       if (response.bookableItems.length > 0) {
         const first = response.bookableItems[0];
-        logInfo(`  First item: ${first.name} (Type: ${first.type})`);
+        if (first) {
+          const itemType = first.sessionType?.name ?? "Unknown";
+          logInfo(`  First item: ${first.name} (Type: ${itemType})`);
+        }
       }
 
       return {
@@ -356,30 +369,44 @@ async function testWriteOperations(apiClient: MindbodyApiClient): Promise<boolea
   return await runTest("Write Operations", "POST /client/updateclient (dry-run)", async () => {
     try {
       // First, get a client to test with
-      const clientsResponse = await apiClient.getClients({ limit: 1, offset: 0 }, true);
+      const clientsResponse = await apiClient.getClients({ limit: 1, offset: 0, force: true });
 
-      if (!clientsResponse.Clients || clientsResponse.Clients.length === 0) {
+      const clients = clientsResponse.Clients as Array<{
+        Id: string;
+        FirstName?: string;
+        LastName?: string;
+        Email?: string;
+      }>;
+
+      if (!clients || clients.length === 0) {
         return {
           success: false,
           error: "No clients available for testing write operations",
         };
       }
 
-      const testClient = clientsResponse.Clients[0];
+      const testClient = clients[0];
+      if (!testClient) {
+        return {
+          success: false,
+          error: "Failed to access first client",
+        };
+      }
+
       logInfo(`  Test client: ${testClient.FirstName} ${testClient.LastName} (ID: ${testClient.Id})`);
 
       // Prepare a safe test update (just email formatting)
       const currentEmail = testClient.Email || "test@example.com";
-      const testUpdate = {
-        Id: testClient.Id,
-        Email: currentEmail, // No actual change
-      };
 
       logInfo(`  Simulating update with email: ${currentEmail}`);
       logWarning("  DRY RUN: Not actually sending update to API");
 
       // In a real scenario, you would call:
-      // const response = await apiClient.updateClient(testUpdate, true);
+      // const response = await apiClient.updateClient({
+      //   clientId: testClient.Id,
+      //   data: { Email: currentEmail },
+      //   force: true
+      // });
 
       // For this connectivity test, we'll just validate the structure
       return {
@@ -456,10 +483,10 @@ async function main() {
       const authService = new AuthService(config);
       const rateLimitGuard = new RateLimitGuard(db, config);
       const apiClient = new MindbodyApiClient(config, rateLimitGuard, authService);
-      const appointmentService = new AppointmentService(apiClient, db, config);
+      const appointmentService = new AppointmentService(apiClient, db);
 
       // 2. Test Authentication
-      const authPassed = await testAuthentication(config, authService);
+      const authPassed = await testAuthentication(authService);
 
       if (authPassed) {
         // 3. Test Rate Limiting
