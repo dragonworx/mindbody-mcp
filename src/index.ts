@@ -12,22 +12,6 @@ import { loadConfig } from "./config.js";
 import { DatabaseClient } from "./db/client.js";
 import { MindbodyApiClient } from "./services/mindbody.js";
 import { RateLimitGuard } from "./services/rateLimit.js";
-import { SyncService } from "./services/sync.js";
-import { AppointmentService } from "./services/appointment.js";
-import {
-  syncClientsSchema,
-  exportSalesHistorySchema,
-  analyzeFormulaNotesSchema,
-  writeClientProfileSchema,
-  getAppointmentsSchema,
-  getBookableItemsSchema,
-  handleSyncClients,
-  handleExportSalesHistory,
-  handleAnalyzeFormulaNotes,
-  handleWriteClientProfile,
-  handleGetAppointments,
-  handleGetBookableItems,
-} from "./mcp/tools/index.js";
 import {
   getQuotaStatus,
   getSyncLogs,
@@ -42,18 +26,16 @@ async function main(): Promise<void> {
   // Ensure data directory exists
   await Bun.write(`${config.DATA_DIR}/.gitkeep`, "");
 
-  // Initialize services
+  // Initialize foundational services
   const db = new DatabaseClient(config);
   const rateLimitGuard = new RateLimitGuard(db, config);
   const apiClient = new MindbodyApiClient(config, rateLimitGuard);
-  const syncService = new SyncService(apiClient, db);
-  const appointmentService = new AppointmentService(apiClient, db);
 
   // Create MCP server
   const server = new Server(
     {
       name: config.MCP_SERVER_NAME,
-      version: "1.0.0",
+      version: "2.0.0",
     },
     {
       capabilities: {
@@ -64,253 +46,19 @@ async function main(): Promise<void> {
   );
 
   // Register tool handlers
+  // TODO: Implement metadata-driven tool registration (EP1-S01 through EP1-S12)
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
-        {
-          name: "sync_clients",
-          description:
-            "Downloads and caches client profiles from Mindbody. Handles pagination automatically. Use this before querying clients.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              status: {
-                type: "string",
-                enum: ["Active", "Inactive", "All"],
-                default: "Active",
-                description: "Client status filter",
-              },
-              since_date: {
-                type: "string",
-                description: "ISO date string for delta syncs (optional)",
-              },
-              force: {
-                type: "boolean",
-                default: false,
-                description: "Override rate limit checks",
-              },
-            },
-          },
-        },
-        {
-          name: "export_sales_history",
-          description:
-            "Extracts sales data for a date range. Automatically chunks large ranges into weekly requests to prevent timeouts.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              start_date: {
-                type: "string",
-                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-                description: "Start date in YYYY-MM-DD format",
-              },
-              end_date: {
-                type: "string",
-                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-                description: "End date in YYYY-MM-DD format",
-              },
-              format: {
-                type: "string",
-                enum: ["json", "csv"],
-                default: "json",
-                description: "Export format",
-              },
-              force: {
-                type: "boolean",
-                default: false,
-                description: "Override rate limit checks",
-              },
-            },
-            required: ["start_date", "end_date"],
-          },
-        },
-        {
-          name: "analyze_formula_notes",
-          description:
-            "Retrieves and structures unstructured SOAP/Formula notes for specific clients.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              client_id_list: {
-                type: "array",
-                items: { type: "string" },
-                description: "Array of client IDs to fetch notes for",
-              },
-              force: {
-                type: "boolean",
-                default: false,
-                description: "Override rate limit checks",
-              },
-            },
-            required: ["client_id_list"],
-          },
-        },
-        {
-          name: "write_client_profile",
-          description:
-            "Updates a client's profile. **Requires confirmation**. Use dry_run: true to preview changes first.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              client_id: {
-                type: "string",
-                description: "Client ID to update",
-              },
-              data: {
-                type: "object",
-                description: "JSON object with client data to update",
-              },
-              dry_run: {
-                type: "boolean",
-                default: true,
-                description: "If true, only show what would be updated without making changes",
-              },
-              force: {
-                type: "boolean",
-                default: false,
-                description: "Override rate limit checks",
-              },
-            },
-            required: ["client_id", "data"],
-          },
-        },
-        {
-          name: "get_appointments",
-          description:
-            "Retrieves appointments from Mindbody with filtering options. Supports date range, staff, location, and client filtering. Results are cached for 1 hour to minimize API calls.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              startDate: {
-                type: "string",
-                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-                description: "Start date in YYYY-MM-DD format (required)",
-              },
-              endDate: {
-                type: "string",
-                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-                description: "End date in YYYY-MM-DD format (optional)",
-              },
-              staffIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by specific staff IDs (optional)",
-              },
-              locationIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by specific location IDs (optional)",
-              },
-              clientIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by specific client IDs (optional)",
-              },
-              limit: {
-                type: "number",
-                minimum: 1,
-                maximum: 200,
-                default: 100,
-                description: "Number of results to return (default: 100, max: 200)",
-              },
-              offset: {
-                type: "number",
-                minimum: 0,
-                default: 0,
-                description: "Number of results to skip for pagination",
-              },
-              force: {
-                type: "boolean",
-                default: false,
-                description: "Override cache and rate limit checks",
-              },
-            },
-            required: ["startDate"],
-          },
-        },
-        {
-          name: "get_bookable_appointments",
-          description:
-            "Retrieves available appointment types that can be booked. Returns service types with pricing, staff availability, and location information. Results are cached for 24 hours.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              locationIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by specific location IDs (optional)",
-              },
-              programIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by specific program IDs (optional)",
-              },
-              sessionTypeIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by specific session type IDs (optional)",
-              },
-              staffIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by specific staff IDs (optional)",
-              },
-              limit: {
-                type: "number",
-                minimum: 1,
-                maximum: 200,
-                default: 100,
-                description: "Number of results to return (default: 100, max: 200)",
-              },
-              offset: {
-                type: "number",
-                minimum: 0,
-                default: 0,
-                description: "Number of results to skip for pagination",
-              },
-              force: {
-                type: "boolean",
-                default: false,
-                description: "Override cache and rate limit checks",
-              },
-            },
-            required: [],
-          },
-        },
+        // Tools will be dynamically registered from endpoint metadata
       ],
     };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
-      switch (request.params.name) {
-        case "sync_clients": {
-          const args = syncClientsSchema.parse(request.params.arguments);
-          return await handleSyncClients(args, syncService);
-        }
-        case "export_sales_history": {
-          const args = exportSalesHistorySchema.parse(request.params.arguments);
-          return await handleExportSalesHistory(args, syncService, db, config);
-        }
-        case "analyze_formula_notes": {
-          const args = analyzeFormulaNotesSchema.parse(request.params.arguments);
-          return await handleAnalyzeFormulaNotes(args, apiClient);
-        }
-        case "write_client_profile": {
-          const args = writeClientProfileSchema.parse(request.params.arguments);
-          return await handleWriteClientProfile(args, apiClient);
-        }
-        case "get_appointments": {
-          const args = getAppointmentsSchema.parse(request.params.arguments);
-          return await handleGetAppointments(args, appointmentService);
-        }
-        case "get_bookable_appointments": {
-          const args = getBookableItemsSchema.parse(request.params.arguments);
-          return await handleGetBookableItems(args, appointmentService);
-        }
-        default:
-          throw new Error(`Unknown tool: ${request.params.name}`);
-      }
+      // TODO: Implement generic tool handler (EP1-S02)
+      throw new Error(`Tool not yet implemented: ${request.params.name}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return {
@@ -383,8 +131,10 @@ async function main(): Promise<void> {
 
   // Log startup (to stderr so it doesn't interfere with stdio)
   console.error(`[${config.MCP_SERVER_NAME}] Server started successfully`);
+  console.error(`[${config.MCP_SERVER_NAME}] Version: 2.0.0 (Hybrid Architecture)`);
   console.error(`[${config.MCP_SERVER_NAME}] Data directory: ${config.DATA_DIR}`);
   console.error(`[${config.MCP_SERVER_NAME}] Log level: ${config.LOG_LEVEL}`);
+  console.error(`[${config.MCP_SERVER_NAME}] Ready for metadata-driven tool registration`);
 }
 
 // Handle graceful shutdown

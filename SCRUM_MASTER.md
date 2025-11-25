@@ -1,8 +1,9 @@
-# Scrum Master Guidelines - Mindbody MCP Server
+# Scrum Master Guidelines - Mindbody MCP Server (Hybrid Architecture)
 
-**Version:** 1.0.0
-**Last Updated:** 2024-11-24
-**Purpose:** This document provides comprehensive guidelines for AI agents working on the Mindbody MCP Server project to ensure consistent, high-quality, and deterministic implementation across all user stories and features.
+**Version:** 2.0.0 (Major Architecture Revision)
+**Last Updated:** 2024-11-26
+**Architecture:** Generic API wrapper with intelligent middleware
+**Purpose:** Guidelines for implementing the hybrid MCP server that exposes all Mindbody API endpoints with intelligent handling
 
 ---
 
@@ -10,18 +11,16 @@
 
 1. [AI Agent Initialization](#ai-agent-initialization)
 2. [Project Overview](#project-overview)
-3. [Tech Stack](#tech-stack)
-4. [Architecture Principles](#architecture-principles)
-5. [Testing Standards](#testing-standards)
-6. [API Integration Guidelines](#api-integration-guidelines)
-7. [Caching Strategy](#caching-strategy)
-8. [AI/Agentic Behavior Configuration](#aiagentic-behavior-configuration)
-9. [MCP Server Standards](#mcp-server-standards)
-10. [Code Quality Standards](#code-quality-standards)
-11. [Documentation Requirements](#documentation-requirements)
-12. [Definition of Done](#definition-of-done)
-13. [Workflow Process](#workflow-process)
-14. [File Structure](#file-structure)
+3. [Architecture Philosophy](#architecture-philosophy)
+4. [Tech Stack](#tech-stack)
+5. [Core Architecture Components](#core-architecture-components)
+6. [Endpoint Metadata Specification](#endpoint-metadata-specification)
+7. [Intelligence Layer Configuration](#intelligence-layer-configuration)
+8. [Testing Standards](#testing-standards)
+9. [Code Quality Standards](#code-quality-standards)
+10. [Definition of Done](#definition-of-done)
+11. [Workflow Process](#workflow-process)
+12. [File Structure](#file-structure)
 
 ---
 
@@ -31,18 +30,17 @@
 
 **IMPORTANT: AI agents MUST follow these rules:**
 
-1. **NO GIT OPERATIONS**: Do not stage, commit, or perform any git operations. The developer will handle all version control.
-2. **NO JSDOC COMMENTS**: Do not add JSDoc comments to any code. This codebase is designed for rapid refactoring and human-readable documentation wastes tokens and time.
-3. **ALWAYS REFERENCE API SPEC**: When implementing any Mindbody API endpoint, you MUST consult `api-specs/mindbody-public-api-v6.json` for correct endpoint paths, parameters, and response structures. This is critical for functionality.
+1. **NO GIT OPERATIONS**: Do not stage, commit, or perform any git operations
+2. **NO JSDOC COMMENTS**: Do not add JSDoc comments - code should be self-documenting
+3. **ALWAYS REFERENCE API SPEC**: When defining endpoint metadata, consult `api-specs/mindbody-public-api-v6.json`
+4. **GENERIC OVER CUSTOM**: Never write custom logic per endpoint - use metadata-driven approach
 
 ### Start Here: Working on This Project
 
-When starting a new session to contribute to the Mindbody MCP Server, use these instructions to identify and implement your next task.
-
-### Standard Prompt Template
+When starting a new session:
 
 ```
-You are working on the Mindbody MCP Server project.
+You are working on the Mindbody MCP Server (Hybrid Architecture).
 
 Task: Implement the next incomplete story from @AGILE_PLAN.md
 
@@ -55,70 +53,76 @@ Process:
 
 ### Story Selection Priority
 
-**Rules for selecting work:**
-
-1. **Work sequentially through sprints**
-   - Start with Sprint 1, then Sprint 2, then Sprint 3, etc.
-   - Complete all stories in a sprint before moving to the next sprint
-
-2. **Within each sprint, work in order**
-   - Stories are listed in implementation order
-   - Select the first story with an unchecked `- [ ]` checkbox
-   - Do not skip stories unless blocked by dependencies
-
-3. **Check for dependencies**
-   - Some stories depend on database schemas or adapters from previous stories
-   - If a story requires infrastructure that doesn't exist, implement dependencies first
-   - Infrastructure stories (database schemas, adapters) are typically listed early in each sprint
-
-4. **Confirm before starting**
-   - Always state the story ID and name before beginning implementation
-   - Example: "I will implement EP1-S01: View Appointment List Tool"
-   - This ensures clarity and prevents duplicate work
-
-### What Success Looks Like
-
-When you complete a story, you should have:
-
-- ✅ All acceptance criteria met
-- ✅ >90% test coverage (or >85% for non-critical features)
-- ✅ All code following architecture principles (adapters, versioning, caching)
-- ✅ Story marked complete in AGILE_PLAN.md with `- [x]`
-- ✅ Progress tracking section updated
-
-### Quick Start Example
-
-**You say:** "Implement the next story from AGILE_PLAN.md following SCRUM_MASTER.md"
-
-**Agent responds:**
-```
-Analyzing AGILE_PLAN.md...
-
-Current Sprint: Sprint 1 (Foundation - Appointments & Classes Read Operations)
-Next Story: EP1-S01 - View Appointment List Tool (5 points)
-
-I will implement this story following the workflow process:
-1. Analysis - Understanding requirements and dependencies
-2. Design - Planning adapters, cache strategy, and tests
-3. Implementation - Building the feature
-4. Testing - Achieving >90% coverage
-5. Completion - Review and mark story as done
-
-Starting implementation...
-```
+1. **Work sequentially through sprints** - Sprint 1 first
+2. **Within sprints, work in order** - First unchecked story
+3. **Sprint 1 is critical** - Infrastructure must be complete before endpoints
+4. **Confirm before starting** - State story ID and name
 
 ---
 
 ## Project Overview
 
-The Mindbody MCP Server is a Model Context Protocol (MCP) server that provides AI agents with comprehensive access to the Mindbody API. It enables agentic workflows for managing appointments, classes, sales, clients, staff, and more through a well-structured, cached, and versioned interface.
+The Mindbody MCP Server is a **generic API wrapper** that exposes all 95+ Mindbody Public API endpoints as MCP tools with intelligent middleware handling caching, pagination, rate limiting, and token management.
 
 **Core Goals:**
-- Provide full MCP tool coverage for Mindbody API (83 user stories across 8 epics)
-- Enable efficient AI agent interactions with fitness/wellness business data
-- Maintain robust caching to minimize API calls and token usage
-- Support versioned API implementations for backward compatibility
-- Deliver production-ready, well-tested code with >90% coverage
+- Expose 100% of Mindbody API endpoints (95+) as MCP tools
+- Enable AI agents to orchestrate complex workflows
+- Provide transparent intelligence layer for optimization
+- Achieve 100% API coverage in 8 weeks (38 stories)
+
+**Key Innovation:**
+- **Agent determines "why" and "what"** (business logic)
+- **Server provides "how"** (transport with intelligence)
+- **Generic handler** - one implementation for all endpoints
+
+---
+
+## Architecture Philosophy
+
+### Agent Orchestrates, Server Executes
+
+```
+┌─────────────────────────────────────┐
+│  AI Agent (Claude)                   │
+│  - Determines business logic         │
+│  - Orchestrates multi-step workflows│
+│  - Handles edge cases and decisions │
+└──────────────┬──────────────────────┘
+               │ MCP Protocol
+               ↓
+┌─────────────────────────────────────┐
+│  MCP Server (This Project)           │
+│                                      │
+│  ┌────────────────────────────────┐ │
+│  │ Dynamic Tool Registration      │ │
+│  │ (Auto-generated from metadata) │ │
+│  └────────────┬───────────────────┘ │
+│               ↓                      │
+│  ┌────────────────────────────────┐ │
+│  │ Generic Request Handler        │ │
+│  └────────────┬───────────────────┘ │
+│               ↓                      │
+│  ┌────────────────────────────────┐ │
+│  │ Intelligence Layer             │ │
+│  │ • Caching (auto, per-endpoint) │ │
+│  │ • Pagination (optional flag)   │ │
+│  │ • Rate limiting (always on)    │ │
+│  │ • Token refresh (auto-retry)   │ │
+│  └────────────┬───────────────────┘ │
+└───────────────┼─────────────────────┘
+                ↓ HTTPS
+┌─────────────────────────────────────┐
+│  Mindbody Public API v6             │
+└─────────────────────────────────────┘
+```
+
+### Design Principles
+
+1. **Generic Over Custom** - Never write endpoint-specific logic
+2. **Metadata-Driven** - All endpoint behavior defined in metadata
+3. **Intelligence is Transparent** - Features work without agent awareness
+4. **Optional Flags** - Agent controls auto_paginate, use_cache, dry_run
+5. **Single Handler** - One implementation routes all tool calls
 
 ---
 
@@ -128,339 +132,453 @@ The Mindbody MCP Server is a Model Context Protocol (MCP) server that provides A
 
 **Runtime & Language:**
 - **Bun** - JavaScript runtime and package manager
-- **TypeScript** - Primary language (strict mode enabled)
-- **Node.js compatibility** - Support Node.js environments where Bun unavailable
+- **TypeScript** - Strict mode enabled
+- **Node.js compatibility** - Support where Bun unavailable
 
 **Frameworks & Libraries:**
-- **Mastra** - Agentic behavior, workflows, and AI model management
 - **MCP SDK** - Model Context Protocol implementation
-- **Zod** - Schema validation and type safety
+- **Zod** - Schema validation (for metadata AND input validation)
 
 **Database & Caching:**
-- **SQLite** - Local database for caching and data persistence
+- **SQLite** - Local cache and rate limit tracking
 - **Better-SQLite3** - Synchronous SQLite bindings
 
 **Testing:**
 - **Bun Test** - Primary test runner
-- **Mock Service Worker (MSW)** or similar - API mocking
-
-**AI/LLM:**
-- **Configurable providers** - OpenAI, Anthropic, etc. via Mastra
-- **Model flexibility** - Support multiple models per provider
+- **Mock data** - No external API calls in tests
 
 ---
 
-## Architecture Principles
+## Core Architecture Components
 
-### 1. Adapter Pattern for External Dependencies
+### 1. Endpoint Metadata Registry
 
-**Rule:** All external services MUST use the adapter pattern to enable mocking in tests.
+**Purpose:** Central source of truth for all API endpoints
 
-**Examples of Required Adapters:**
-- `MindbodyAPIAdapter` - Wraps Mindbody API calls
-- `CacheAdapter` - Wraps caching layer (SQLite)
-- `AIClientAdapter` - Wraps LLM provider calls
-- `DatabaseAdapter` - Wraps database operations
+**Responsibilities:**
+- Store metadata for 95+ endpoints
+- Support querying by name or category
+- Enable dynamic tool generation
+- Validate metadata structure
 
-**Implementation:**
+**Key Files:**
+- `src/metadata/schema.ts` - Metadata TypeScript types
+- `src/metadata/registry.ts` - Registry class
+- `src/metadata/endpoints/*.ts` - Endpoint definitions by category
+
+### 2. Generic Request Handler
+
+**Purpose:** Single handler that can call any Mindbody endpoint
+
+**Responsibilities:**
+- Accept endpoint metadata + parameters
+- Build HTTP request from metadata
+- Integrate intelligence layer
+- Transform responses
+- Handle errors
+
+**Key Files:**
+- `src/services/genericApiHandler.ts`
+- `src/services/genericApiHandler.test.ts`
+
+### 3. Intelligence Layer
+
+**Purpose:** Transparent optimization features
+
+**Components:**
+- **Caching** - Auto-cache GET requests with configurable TTL
+- **Pagination** - Optional auto-pagination for large datasets
+- **Rate Limiting** - Enforce 1,000 calls/day limit
+- **Token Management** - Auto-refresh on 401/403, retry request
+
+**Key Files:**
+- `src/services/caching.ts`
+- `src/services/pagination.ts`
+- `src/services/rateLimit.ts`
+- `src/services/auth.ts` (existing)
+
+### 4. Dynamic Tool Registration
+
+**Purpose:** Auto-generate MCP tools from metadata
+
+**Responsibilities:**
+- Read endpoint registry
+- Convert metadata to MCP tool definitions
+- Generate inputSchema from Zod schemas
+- Register all tools in MCP server
+
+**Key Files:**
+- `src/mcp/toolGenerator.ts`
+- `src/mcp/handlers/genericToolHandler.ts`
+
+---
+
+## Endpoint Metadata Specification
+
+### Metadata Structure
+
+Every endpoint MUST have metadata defining:
+
 ```typescript
-// Interface definition
-interface IMindbodyAPIAdapter {
-  getClients(params: GetClientsParams): Promise<Client[]>;
-  getAppointments(params: GetAppointmentsParams): Promise<Appointment[]>;
-  // ... more methods
-}
+interface EndpointMetadata {
+  // Identity
+  name: string;                    // Tool name (e.g., "get_clients")
+  category: EndpointCategory;      // client | appointment | class | sale | staff | site | enrollment | payroll
 
-// Real implementation
-class MindbodyAPIAdapter implements IMindbodyAPIAdapter {
-  constructor(private version: string, private credentials: APICredentials) {}
+  // HTTP Configuration
+  endpoint: string;                // API path (e.g., "/client/clients")
+  method: HTTPMethod;              // GET | POST | PUT | DELETE
 
-  async getClients(params: GetClientsParams): Promise<Client[]> {
-    // Real API call
-  }
-}
+  // Documentation
+  description: string;             // Concise description for agents
 
-// Mock implementation for tests
-class MockMindbodyAPIAdapter implements IMindbodyAPIAdapter {
-  async getClients(params: GetClientsParams): Promise<Client[]> {
-    // Return mock data
-    return mockClients;
-  }
+  // Input Validation
+  inputSchema: z.ZodObject<any>;   // Zod schema for parameter validation
+
+  // Intelligence Configuration
+  intelligence: {
+    cacheable: boolean;            // Enable caching for GET requests
+    cacheTTL?: number;             // TTL in seconds (if cacheable)
+    supportsPagination: boolean;   // Endpoint returns PaginationResponse
+    requiresConfirmation: boolean; // Mutation requires dry-run first
+    invalidatesCache?: string[];   // Cache keys to invalidate on success
+  };
+
+  // Response Configuration
+  responseTransform?: (data: any) => any;  // Optional response transformation
 }
 ```
 
-### 2. API Versioning
+### Example: GET /client/clients
 
-**Rule:** ALL Mindbody API interactions MUST be version-aware.
-
-**Implementation Strategy:**
-```typescript
-// Version registry
-const API_VERSIONS = {
-  'v6': MindbodyAPIAdapterV6,
-  'v7': MindbodyAPIAdapterV7,
-} as const;
-
-// Factory pattern for version selection
-class MindbodyAPIFactory {
-  static create(version: string, credentials: APICredentials): IMindbodyAPIAdapter {
-    const AdapterClass = API_VERSIONS[version];
-    if (!AdapterClass) {
-      throw new Error(`Unsupported API version: ${version}`);
-    }
-    return new AdapterClass(credentials);
-  }
-}
-
-// Configuration
-const config = {
-  mindbody: {
-    version: 'v6', // Current working version
-    credentials: { /* ... */ }
-  }
-};
-```
-
-**File Structure:**
-```
-src/adapters/mindbody/
-  ├── interface.ts          # IMindbodyAPIAdapter interface
-  ├── factory.ts            # Version factory
-  ├── v6/
-  │   ├── adapter.ts        # V6 implementation
-  │   ├── types.ts          # V6-specific types
-  │   └── endpoints.ts      # V6 endpoint definitions
-  └── v7/
-      ├── adapter.ts        # V7 implementation (future)
-      └── types.ts
-```
-
-### 3. Separation of Concerns
-
-**Layers:**
-1. **MCP Layer** (`src/mcp/`) - Tool definitions, resource handlers
-2. **Service Layer** (`src/services/`) - Business logic, orchestration
-3. **Adapter Layer** (`src/adapters/`) - External service interfaces
-4. **Data Layer** (`src/database/`) - Schema, queries, migrations
-5. **Types Layer** (`src/types/`) - Shared TypeScript types
-6. **Utils Layer** (`src/utils/`) - Helper functions, validators
-
-**Rule:** Each layer MUST only depend on layers below it. No circular dependencies.
-
-### 4. Configuration Management
-
-**Rule:** All configuration MUST be:
-- Type-safe (using Zod schemas)
-- Provide sensible defaults
-- Support environment variable overrides
-
-**Example:**
 ```typescript
 import { z } from 'zod';
 
-const ConfigSchema = z.object({
-  mindbody: z.object({
-    version: z.string().default('v6'),
-    apiKey: z.string(),
-    siteId: z.string(),
-    timeout: z.number().default(30000),
-  }),
-  cache: z.object({
-    enabled: z.boolean().default(true),
-    ttl: z.number().default(3600), // 1 hour default
-    maxSize: z.number().default(1000),
-  }),
-  ai: z.object({
-    provider: z.enum(['openai', 'anthropic', 'custom']).default('openai'),
-    model: z.string().default('gpt-4-turbo-preview'),
-    temperature: z.number().min(0).max(2).default(0.7),
-    maxTokens: z.number().default(4096),
-  }),
-});
+export const getClientsMetadata: EndpointMetadata = {
+  name: 'get_clients',
+  category: 'client',
+  endpoint: '/client/clients',
+  method: 'GET',
+  description: 'Retrieves clients with optional filtering and pagination. Results cached for 1 hour.',
 
-type Config = z.infer<typeof ConfigSchema>;
+  inputSchema: z.object({
+    searchText: z.string().optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    limit: z.number().min(1).max(200).default(100),
+    offset: z.number().min(0).default(0),
+    auto_paginate: z.boolean().default(false),
+    use_cache: z.boolean().default(true),
+    force: z.boolean().default(false),
+  }),
+
+  intelligence: {
+    cacheable: true,
+    cacheTTL: 3600, // 1 hour
+    supportsPagination: true,
+    requiresConfirmation: false,
+  },
+};
+```
+
+### Example: POST /client/addclient
+
+```typescript
+export const addClientMetadata: EndpointMetadata = {
+  name: 'add_client',
+  category: 'client',
+  endpoint: '/client/addclient',
+  method: 'POST',
+  description: 'Creates a new client account. Requires FirstName, LastName, and Email.',
+
+  inputSchema: z.object({
+    FirstName: z.string().min(1),
+    LastName: z.string().min(1),
+    Email: z.string().email(),
+    MobilePhone: z.string().optional(),
+    AddressLine1: z.string().optional(),
+    City: z.string().optional(),
+    State: z.string().optional(),
+    PostalCode: z.string().optional(),
+    dry_run: z.boolean().default(true),
+    force: z.boolean().default(false),
+  }),
+
+  intelligence: {
+    cacheable: false,
+    supportsPagination: false,
+    requiresConfirmation: true,
+    invalidatesCache: ['/client/clients:*'], // Wildcard invalidation
+  },
+};
+```
+
+### Cache TTL Guidelines
+
+| Data Type | TTL | Examples |
+|-----------|-----|----------|
+| Static | 604800s (1 week) | countries, genders, referral types |
+| Semi-static | 86400s (24 hours) | staff, locations, programs, bookable items |
+| Dynamic | 3600s (1 hour) | clients, appointments, classes |
+| Real-time | 300s (5 minutes) | availability, shopping cart |
+| Transactional | No cache | purchases, bookings, updates |
+
+---
+
+## Intelligence Layer Configuration
+
+### 1. Caching
+
+**When:**
+- **Always** for GET requests (unless use_cache=false)
+- **Never** for POST/PUT/DELETE requests
+
+**How:**
+```typescript
+// Before API call
+if (metadata.method === 'GET' && params.use_cache !== false) {
+  const cached = await cache.get(cacheKey);
+  if (cached) return cached;
+}
+
+// After successful API call
+if (metadata.intelligence.cacheable) {
+  await cache.set(cacheKey, response, metadata.intelligence.cacheTTL);
+}
+```
+
+**Cache Key Generation:**
+```typescript
+function generateCacheKey(endpoint: string, params: Record<string, any>): string {
+  const sortedParams = Object.keys(params)
+    .filter(k => !['auto_paginate', 'use_cache', 'force', 'dry_run'].includes(k))
+    .sort()
+    .map(k => `${k}=${params[k]}`)
+    .join('&');
+
+  return `${endpoint}:${hashString(sortedParams)}`;
+}
+```
+
+### 2. Auto-Pagination
+
+**When:**
+- Endpoint has `supportsPagination: true`
+- Agent passes `auto_paginate: true` flag
+
+**How:**
+```typescript
+if (metadata.intelligence.supportsPagination && params.auto_paginate) {
+  const allResults = [];
+  let offset = 0;
+  const limit = params.limit || 100;
+
+  while (true) {
+    const response = await makeRequest({ ...params, limit, offset });
+    const data = extractData(response);
+    allResults.push(...data);
+
+    // Check if done
+    if (data.length < limit) break;
+    if (response.PaginationResponse &&
+        offset + data.length >= response.PaginationResponse.TotalResults) break;
+
+    offset += limit;
+  }
+
+  return { results: allResults, totalFetched: allResults.length };
+}
+```
+
+### 3. Rate Limiting
+
+**When:** Before EVERY API request (including retries)
+
+**How:**
+```typescript
+// Before API call
+await rateLimitGuard.checkLimit(params.force);
+
+// After API call
+rateLimitGuard.recordCall();
+
+// After retry
+rateLimitGuard.recordCall(); // Count retry separately
+```
+
+**Configuration:**
+- Default limit: 950 calls/day (safety buffer)
+- Configurable via `DAILY_API_LIMIT_OVERRIDE`
+- Force flag bypasses limit (use cautiously)
+
+### 4. Token Refresh & Retry
+
+**When:** Response status is 401 or 403
+
+**How:**
+```typescript
+const response = await fetch(url, { headers });
+
+if (response.status === 401 || response.status === 403) {
+  authService.invalidateToken();
+  const newToken = await authService.getUserToken();
+
+  // Retry with new token
+  const retryResponse = await fetch(url, {
+    headers: { ...headers, Authorization: `Bearer ${newToken}` }
+  });
+
+  rateLimitGuard.recordCall(); // Count retry
+  return retryResponse;
+}
 ```
 
 ---
 
 ## Testing Standards
 
-### CRITICAL: Unit Tests ONLY
-
-**IMPORTANT:** This project ONLY implements unit tests. No integration tests or E2E tests.
-
 ### Test Coverage Requirements
 
-- **Minimum Coverage:** 90% for critical features (appointments, classes, sales, clients)
-- **Minimum Coverage:** 85% for other features (staff, site, enrollment, payroll)
-- **Branch Coverage:** >80% for all code paths
+- **Infrastructure (EP-1):** 95%+ coverage
+- **Endpoint Metadata:** 90%+ coverage per category
+- **Integration Tests:** End-to-end flow verification
 
 ### Test Structure
 
-**File Naming:**
-- Test files MUST be named: `{filename}.test.ts`
-- Place tests adjacent to source files: `src/services/appointment.ts` → `src/services/appointment.test.ts`
+**Unit Tests:**
+- Test each infrastructure component in isolation
+- Mock all external dependencies (API, cache, database)
+- Test happy paths, error paths, edge cases
 
-**Test Organization:**
+**Integration Tests:**
+- Test complete request flow with sample endpoints
+- Verify intelligence features work together
+- Use mock API responses (no real API calls)
+
+### Example Unit Test Structure
+
 ```typescript
-import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, mock } from 'bun:test';
 
-describe('AppointmentService', () => {
-  let service: AppointmentService;
-  let mockAPIAdapter: MockMindbodyAPIAdapter;
+describe('GenericApiHandler', () => {
+  let handler: GenericApiHandler;
   let mockCache: MockCacheAdapter;
+  let mockAuth: MockAuthService;
+  let mockRateLimit: MockRateLimitGuard;
 
   beforeEach(() => {
-    // Setup mocks
-    mockAPIAdapter = new MockMindbodyAPIAdapter();
     mockCache = new MockCacheAdapter();
-    service = new AppointmentService(mockAPIAdapter, mockCache);
+    mockAuth = new MockAuthService();
+    mockRateLimit = new MockRateLimitGuard();
+    handler = new GenericApiHandler(mockCache, mockAuth, mockRateLimit);
   });
 
-  afterEach(() => {
-    // Cleanup
-  });
+  describe('GET requests with caching', () => {
+    test('should return cached data when available', async () => {
+      const metadata = getClientsMetadata;
+      const params = { limit: 100, offset: 0 };
+      const cachedData = [{ id: '1', name: 'John' }];
 
-  describe('getAppointments()', () => {
-    test('should return appointments from cache when available', async () => {
-      // Arrange
-      const mockAppointments = [/* ... */];
-      mockCache.get = mock(() => Promise.resolve(mockAppointments));
+      mockCache.get = mock(() => Promise.resolve(cachedData));
 
-      // Act
-      const result = await service.getAppointments({ startDate: '2024-01-01' });
+      const result = await handler.request(metadata, params);
 
-      // Assert
-      expect(result).toEqual(mockAppointments);
+      expect(result).toEqual(cachedData);
       expect(mockCache.get).toHaveBeenCalledTimes(1);
-      expect(mockAPIAdapter.getAppointments).not.toHaveBeenCalled();
+      expect(mockAuth.getUserToken).not.toHaveBeenCalled(); // No API call
     });
 
-    test('should fetch from API when cache misses', async () => {
-      // Arrange
+    test('should fetch from API and cache when cache misses', async () => {
+      const metadata = getClientsMetadata;
+      const params = { limit: 100, offset: 0 };
+      const apiData = { Clients: [{ Id: '1', FirstName: 'John' }] };
+
       mockCache.get = mock(() => Promise.resolve(null));
-      const mockAppointments = [/* ... */];
-      mockAPIAdapter.getAppointments = mock(() => Promise.resolve(mockAppointments));
+      mockAuth.getUserToken = mock(() => Promise.resolve('test-token'));
+      global.fetch = mock(() => Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(apiData),
+      }));
 
-      // Act
-      const result = await service.getAppointments({ startDate: '2024-01-01' });
+      const result = await handler.request(metadata, params);
 
-      // Assert
-      expect(result).toEqual(mockAppointments);
-      expect(mockAPIAdapter.getAppointments).toHaveBeenCalledTimes(1);
-      expect(mockCache.set).toHaveBeenCalledWith(expect.any(String), mockAppointments);
+      expect(result).toEqual(apiData);
+      expect(mockCache.set).toHaveBeenCalledWith(
+        expect.any(String),
+        apiData,
+        3600 // cacheTTL
+      );
     });
+  });
 
-    test('should handle API errors gracefully', async () => {
-      // Arrange
-      mockCache.get = mock(() => Promise.resolve(null));
-      mockAPIAdapter.getAppointments = mock(() => Promise.reject(new Error('API Error')));
+  describe('Auto-pagination', () => {
+    test('should fetch all pages when auto_paginate=true', async () => {
+      const metadata = getClientsMetadata;
+      const params = { limit: 100, offset: 0, auto_paginate: true };
 
-      // Act & Assert
-      await expect(service.getAppointments({ startDate: '2024-01-01' }))
-        .rejects
-        .toThrow('API Error');
+      // Mock two pages of results
+      const page1 = { Clients: Array(100).fill({ Id: 'test' }) };
+      const page2 = { Clients: Array(50).fill({ Id: 'test' }) };
+
+      global.fetch = mock()
+        .mockReturnValueOnce(Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(page1),
+        }))
+        .mockReturnValueOnce(Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(page2),
+        }));
+
+      const result = await handler.request(metadata, params);
+
+      expect(result.results).toHaveLength(150);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockRateLimit.recordCall).toHaveBeenCalledTimes(2);
     });
+  });
 
-    test('should validate date format', async () => {
-      // Act & Assert
-      await expect(service.getAppointments({ startDate: 'invalid-date' }))
-        .rejects
-        .toThrow('Invalid date format');
+  describe('Error handling', () => {
+    test('should refresh token and retry on 401', async () => {
+      const metadata = getClientsMetadata;
+      const params = { limit: 100 };
+
+      mockAuth.getUserToken = mock()
+        .mockReturnValueOnce(Promise.resolve('expired-token'))
+        .mockReturnValueOnce(Promise.resolve('new-token'));
+
+      global.fetch = mock()
+        .mockReturnValueOnce(Promise.resolve({ status: 401, ok: false }))
+        .mockReturnValueOnce(Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ Clients: [] }),
+        }));
+
+      await handler.request(metadata, params);
+
+      expect(mockAuth.invalidateToken).toHaveBeenCalledTimes(1);
+      expect(mockAuth.getUserToken).toHaveBeenCalledTimes(2);
+      expect(mockRateLimit.recordCall).toHaveBeenCalledTimes(2); // Both calls counted
     });
   });
 });
 ```
 
-### Mocking Strategy
-
-**Rule:** ALL external dependencies MUST be mocked in unit tests.
-
-**Mock Implementations:**
-1. **Mindbody API:** Mock all API responses with realistic test data
-2. **Database:** Use in-memory SQLite or mock database adapter
-3. **Cache:** Mock cache adapter with in-memory storage
-4. **AI/LLM:** Mock AI client responses with predetermined outputs
-5. **File System:** Mock file operations if needed
-6. **Network:** No real network calls in tests
-
-**Test Data Location:**
-```
-tests/
-  ├── fixtures/
-  │   ├── clients.json
-  │   ├── appointments.json
-  │   ├── classes.json
-  │   └── sales.json
-  └── mocks/
-      ├── MindbodyAPIAdapter.mock.ts
-      ├── CacheAdapter.mock.ts
-      └── AIClient.mock.ts
-```
-
-### Test Execution
-
-**Commands:**
-```bash
-# Run all tests
-bun test
-
-# Run tests with coverage
-bun test --coverage
-
-# Run specific test file
-bun test src/services/appointment.test.ts
-
-# Watch mode
-bun test --watch
-```
-
 ---
 
-## API Integration Guidelines
+## Code Quality Standards
 
-### Mindbody API Integration Requirements
+### TypeScript Standards
 
-**1. Version Support**
+**Critical Rules:**
+- **NO `any` types** (except in tests when absolutely necessary)
+- **Strict mode enabled** in tsconfig.json
+- **Use `unknown` for truly unknown types**, then narrow with type guards
+- **Use Zod for runtime validation** - never trust input
 
-Current working version: **v6**
+### Error Handling
 
-**CRITICAL: API Specification Reference**
-
-When implementing ANY endpoint logic, you MUST reference the official API specification:
-- **File Location:** `api-specs/mindbody-public-api-v6.json`
-- **Purpose:** Ensures correct endpoint paths, request parameters, response structures, and data types
-- **Requirement:** All adapters, types, and service implementations MUST match the spec exactly
-
-**Rule:** Before implementing any Mindbody API endpoint, consult `api-specs/mindbody-public-api-v6.json` to verify:
-- Correct endpoint URL and HTTP method
-- Required vs optional parameters
-- Request body structure and data types
-- Response structure and field names
-- Error response formats
-- Authentication requirements
-
-**File Structure:**
-```
-api-specs/
-  └── mindbody-public-api-v6.json  # Official API specification (REFERENCE THIS!)
-
-src/adapters/mindbody/
-  ├── interface.ts          # IMindbodyAPIAdapter
-  ├── factory.ts            # MindbodyAPIFactory
-  ├── types.ts              # Shared types
-  ├── errors.ts             # Custom error classes
-  └── v6/
-      ├── adapter.ts        # V6 implementation
-      ├── endpoints.ts      # V6 endpoint definitions
-      ├── types.ts          # V6-specific types
-      └── client.ts         # HTTP client for V6
-```
-
-**2. Error Handling**
-
-**Rule:** All API calls MUST implement comprehensive error handling.
-
+**Standard Error Format:**
 ```typescript
 class MindbodyAPIError extends Error {
   constructor(
@@ -474,670 +592,61 @@ class MindbodyAPIError extends Error {
   }
 }
 
-class MindbodyAPIAdapter {
-  async getClients(params: GetClientsParams): Promise<Client[]> {
-    try {
-      const response = await this.client.get('/client/clients', { params });
-
-      if (!response.ok) {
-        throw new MindbodyAPIError(
-          `Failed to fetch clients: ${response.statusText}`,
-          response.status,
-          '/client/clients'
-        );
-      }
-
-      return response.data.Clients;
-    } catch (error) {
-      if (error instanceof MindbodyAPIError) {
-        throw error;
-      }
-      throw new MindbodyAPIError(
-        'Unexpected error fetching clients',
-        500,
-        '/client/clients',
-        error as Error
-      );
-    }
-  }
-}
-```
-
-**3. Rate Limiting & Retries**
-
-**Rule:** Implement exponential backoff for rate limit errors.
-
-```typescript
-interface RetryConfig {
-  maxRetries: number;
-  baseDelay: number;
-  maxDelay: number;
-}
-
-const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
-  baseDelay: 1000,
-  maxDelay: 10000,
-};
-
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  config: RetryConfig = DEFAULT_RETRY_CONFIG
-): Promise<T> {
-  let lastError: Error;
-
-  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-
-      if (error instanceof MindbodyAPIError && error.statusCode === 429) {
-        const delay = Math.min(
-          config.baseDelay * Math.pow(2, attempt),
-          config.maxDelay
-        );
-        await sleep(delay);
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  throw lastError!;
-}
-```
-
-**4. Request Validation**
-
-**Rule:** All API requests MUST be validated using Zod schemas.
-
-```typescript
-import { z } from 'zod';
-
-const GetClientsParamsSchema = z.object({
-  searchText: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  limit: z.number().min(1).max(200).default(100),
-  offset: z.number().min(0).default(0),
-});
-
-type GetClientsParams = z.infer<typeof GetClientsParamsSchema>;
-
-async function getClients(params: GetClientsParams): Promise<Client[]> {
-  const validatedParams = GetClientsParamsSchema.parse(params);
-  // ... proceed with API call
-}
-```
-
-**5. Response Transformation**
-
-**Rule:** Transform API responses to internal types consistently.
-
-```typescript
-interface MindbodyClient {
-  Id: string;
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  // ... Mindbody fields
-}
-
-interface Client {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  // ... normalized fields
-}
-
-function transformClient(mbClient: MindbodyClient): Client {
-  return {
-    id: mbClient.Id,
-    firstName: mbClient.FirstName,
-    lastName: mbClient.LastName,
-    email: mbClient.Email,
-  };
-}
-```
-
----
-
-## Caching Strategy
-
-### Cache as a First-Class Citizen
-
-**Rule:** ALL read operations MUST check cache before hitting the API.
-
-### Cache Implementation
-
-**Technology:** SQLite with in-memory option for tests
-
-**Schema:**
-```sql
-CREATE TABLE cache (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL,
-  expires_at INTEGER NOT NULL,
-  created_at INTEGER NOT NULL,
-  hit_count INTEGER DEFAULT 0
+// Usage
+throw new MindbodyAPIError(
+  'Failed to fetch clients',
+  500,
+  '/client/clients',
+  error
 );
-
-CREATE INDEX idx_cache_expires ON cache(expires_at);
-```
-
-### Cache Adapter Interface
-
-```typescript
-interface ICacheAdapter {
-  get<T>(key: string): Promise<T | null>;
-  set<T>(key: string, value: T, ttl?: number): Promise<void>;
-  delete(key: string): Promise<void>;
-  clear(): Promise<void>;
-  has(key: string): Promise<boolean>;
-  prune(): Promise<number>; // Remove expired entries
-}
-
-class SQLiteCacheAdapter implements ICacheAdapter {
-  constructor(private db: Database, private defaultTTL: number = 3600) {}
-
-  async get<T>(key: string): Promise<T | null> {
-    const row = this.db
-      .prepare('SELECT value, expires_at FROM cache WHERE key = ?')
-      .get(key) as { value: string; expires_at: number } | undefined;
-
-    if (!row) return null;
-
-    if (Date.now() > row.expires_at) {
-      await this.delete(key);
-      return null;
-    }
-
-    // Increment hit count
-    this.db
-      .prepare('UPDATE cache SET hit_count = hit_count + 1 WHERE key = ?')
-      .run(key);
-
-    return JSON.parse(row.value) as T;
-  }
-
-  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
-    const expiresAt = Date.now() + (ttl ?? this.defaultTTL) * 1000;
-    const valueJson = JSON.stringify(value);
-
-    this.db
-      .prepare(`
-        INSERT OR REPLACE INTO cache (key, value, expires_at, created_at)
-        VALUES (?, ?, ?, ?)
-      `)
-      .run(key, valueJson, expiresAt, Date.now());
-  }
-
-  // ... other methods
-}
-```
-
-### Cache Key Strategy
-
-**Rule:** Cache keys MUST be deterministic and include all relevant parameters.
-
-```typescript
-function generateCacheKey(endpoint: string, params: Record<string, any>): string {
-  const sortedParams = Object.keys(params)
-    .sort()
-    .reduce((acc, key) => {
-      acc[key] = params[key];
-      return acc;
-    }, {} as Record<string, any>);
-
-  const paramsString = JSON.stringify(sortedParams);
-  const hash = hashString(paramsString); // Use fast hash function
-
-  return `${endpoint}:${hash}`;
-}
-
-// Example usage
-const key = generateCacheKey('/client/clients', {
-  searchText: 'john',
-  limit: 100,
-  offset: 0,
-});
-// Result: "/client/clients:a3f2b9c1"
-```
-
-### Cache TTL Guidelines
-
-**Default TTLs by Data Type:**
-- **Static data** (countries, genders, session types): 1 week (604800s)
-- **Semi-static data** (staff, locations, programs): 24 hours (86400s)
-- **Dynamic data** (appointments, classes): 1 hour (3600s)
-- **Real-time data** (availability, cart): 5 minutes (300s)
-- **Transaction data** (purchases, bookings): No cache
-
-**Configuration:**
-```typescript
-const CACHE_TTL = {
-  STATIC: 604800,      // 1 week
-  SEMI_STATIC: 86400,  // 24 hours
-  DYNAMIC: 3600,       // 1 hour
-  REALTIME: 300,       // 5 minutes
-} as const;
-```
-
-### Cache Invalidation
-
-**Rule:** Write operations MUST invalidate related cache entries.
-
-```typescript
-class AppointmentService {
-  async bookAppointment(params: BookAppointmentParams): Promise<Appointment> {
-    // Book the appointment
-    const appointment = await this.api.bookAppointment(params);
-
-    // Invalidate related cache entries
-    await this.cache.delete(`/appointment/appointments:*`);
-    await this.cache.delete(`/appointment/scheduleItems:*`);
-    await this.cache.delete(`/client/clients:${params.clientId}`);
-
-    return appointment;
-  }
-}
-```
-
----
-
-## AI/Agentic Behavior Configuration
-
-### Mastra Integration
-
-**Rule:** ALL AI/agentic behavior MUST use Mastra for workflows and model management.
-
-### Configuration Structure
-
-```typescript
-import { Mastra, Agent, Workflow } from '@mastra/core';
-
-const aiConfig = {
-  provider: 'openai',           // 'openai' | 'anthropic' | 'custom'
-  model: 'gpt-4-turbo-preview', // Model identifier
-  temperature: 0.7,             // 0.0-2.0, controls randomness
-  maxTokens: 4096,              // Maximum tokens per response
-  topP: 1.0,                    // Nucleus sampling parameter
-  frequencyPenalty: 0.0,        // Reduce repetition
-  presencePenalty: 0.0,         // Encourage new topics
-  timeout: 30000,               // Request timeout (ms)
-};
-
-// Mastra instance
-const mastra = new Mastra({
-  providers: {
-    openai: {
-      apiKey: process.env.OPENAI_API_KEY,
-    },
-    anthropic: {
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    },
-  },
-});
-```
-
-### Agent Configuration
-
-**Rule:** Agents MUST have clear descriptions, sensible defaults, and configurable parameters.
-
-```typescript
-interface AgentConfig {
-  name: string;
-  description: string;
-  model: string;
-  temperature: number;
-  systemPrompt: string;
-  tools: string[];
-  maxIterations: number;
-}
-
-const appointmentAgentConfig: AgentConfig = {
-  name: 'appointment-scheduler',
-  description: 'Assists with appointment scheduling and management',
-  model: 'gpt-4-turbo-preview',
-  temperature: 0.3, // Low temperature for deterministic scheduling
-  systemPrompt: `You are an appointment scheduling assistant...`,
-  tools: [
-    'get_appointments',
-    'check_availability',
-    'book_appointment',
-    'cancel_appointment',
-  ],
-  maxIterations: 5,
-};
-
-const agent = mastra.createAgent(appointmentAgentConfig);
-```
-
-### Workflow Configuration
-
-**Rule:** Complex operations MUST use Mastra workflows for orchestration.
-
-```typescript
-import { Workflow, Step } from '@mastra/core';
-
-const bookingWorkflow = new Workflow({
-  name: 'appointment-booking-workflow',
-  description: 'Complete workflow for booking appointments with validation',
-  steps: [
-    new Step({
-      name: 'validate-client',
-      action: async (context) => {
-        const client = await clientService.getClient(context.clientId);
-        return { valid: !!client, client };
-      },
-    }),
-    new Step({
-      name: 'check-availability',
-      action: async (context) => {
-        const availability = await appointmentService.checkAvailability({
-          serviceId: context.serviceId,
-          staffId: context.staffId,
-          date: context.date,
-        });
-        return { available: availability.length > 0 };
-      },
-    }),
-    new Step({
-      name: 'book-appointment',
-      condition: (context) => context.available,
-      action: async (context) => {
-        return await appointmentService.bookAppointment({
-          clientId: context.clientId,
-          serviceId: context.serviceId,
-          staffId: context.staffId,
-          dateTime: context.dateTime,
-        });
-      },
-    }),
-  ],
-});
-```
-
----
-
-## MCP Server Standards
-
-### Tool Definitions
-
-**Rule:** MCP tools MUST have concise, functional descriptions. The inputSchema documents parameters.
-
-**Tool Structure:**
-```typescript
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
-
-const getClientsToolDefinition: Tool = {
-  name: 'get_clients',
-  description: 'Retrieves clients from Mindbody with optional filtering by search text, date ranges, and pagination. Cached for 1 hour.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      searchText: {
-        type: 'string',
-        description: 'Text to search in client names, emails, or phone numbers',
-      },
-      startDate: {
-        type: 'string',
-        format: 'date-time',
-        description: 'ISO 8601 date to filter clients created after this date',
-      },
-      endDate: {
-        type: 'string',
-        format: 'date-time',
-        description: 'ISO 8601 date to filter clients created before this date',
-      },
-      limit: {
-        type: 'number',
-        minimum: 1,
-        maximum: 200,
-        default: 100,
-        description: 'Number of results to return',
-      },
-      offset: {
-        type: 'number',
-        minimum: 0,
-        default: 0,
-        description: 'Number of results to skip for pagination',
-      },
-    },
-    required: [],
-  },
-};
-```
-
-### Tool Implementation
-
-**Rule:** Tool handlers MUST validate inputs and handle errors gracefully.
-
-```typescript
-import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-
-async function handleToolCall(request: CallToolRequest): Promise<CallToolResult> {
-  try {
-    // Validate tool name
-    if (!AVAILABLE_TOOLS.includes(request.params.name)) {
-      throw new Error(`Unknown tool: ${request.params.name}`);
-    }
-
-    // Validate input schema
-    const tool = TOOL_DEFINITIONS[request.params.name];
-    const validatedInput = validateInput(request.params.arguments, tool.inputSchema);
-
-    // Execute tool
-    const result = await executeTool(request.params.name, validatedInput);
-
-    // Return result
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  } catch (error) {
-    // Return error in MCP format
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            error: error.message,
-            tool: request.params.name,
-          }, null, 2),
-        },
-      ],
-      isError: true,
-    };
-  }
-}
-```
-
-### Resource Definitions
-
-**Rule:** MCP resources MUST provide queryable data endpoints.
-
-```typescript
-const clientsResourceDefinition: Resource = {
-  uri: 'mindbody://clients',
-  name: 'Clients List',
-  description: 'Access to all client records with real-time data',
-  mimeType: 'application/json',
-};
-
-const appointmentsResourceDefinition: ResourceTemplate = {
-  uriTemplate: 'mindbody://appointments/{date}',
-  name: 'Appointments by Date',
-  description: 'Access appointments for a specific date (YYYY-MM-DD format)',
-  mimeType: 'application/json',
-};
-```
-
-### Server Capabilities
-
-**Required Capabilities:**
-```typescript
-const serverCapabilities = {
-  tools: {
-    // List all available tools
-  },
-  resources: {
-    // List all available resources
-  },
-  prompts: {
-    // Optional: Pre-defined prompts
-  },
-};
-```
-
----
-
-## Code Quality Standards
-
-### TypeScript Standards
-
-**tsconfig.json:**
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "lib": ["ES2022"],
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
-}
-```
-
-### Type Safety Rules
-
-**CRITICAL:** Never use `any` type except in tests or when absolutely necessary.
-
-**Preferred Type Strategies:**
-1. **Use `unknown`** for truly unknown types, then narrow
-2. **Use generic constraints** for flexible but type-safe code
-3. **Use discriminated unions** for complex types
-4. **Use explicit type casting** when type narrowing is required
-
-```typescript
-// ❌ BAD - Uses any
-function processData(data: any) {
-  return data.value;
-}
-
-// ✅ GOOD - Uses unknown with type guard
-function processData(data: unknown) {
-  if (isValidData(data)) {
-    return data.value;
-  }
-  throw new Error('Invalid data');
-}
-
-function isValidData(data: unknown): data is { value: string } {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'value' in data &&
-    typeof data.value === 'string'
-  );
-}
-```
-
-### Error Handling
-
-**Rule:** Use standard Error class with descriptive messages.
-
-```typescript
-// Throw errors with clear, actionable messages
-throw new Error('Failed to fetch clients: Invalid API key');
-throw new Error('Validation failed: startDate must be ISO 8601 format');
-throw new Error('Cache operation failed: Database connection lost');
-
-// Catch and re-throw with context
-try {
-  await apiAdapter.getClients(params);
-} catch (error) {
-  throw new Error(`Client fetch failed: ${error.message}`);
-}
 ```
 
 ### Logging Standards
 
-**Rule:** Use standard console methods for logging.
-
-- `console.log()` for informational messages
+Use standard console methods:
+- `console.log()` for info
 - `console.error()` for errors
-- Include relevant context in messages
-- No custom logger infrastructure required
+- Include context in messages
 
 ```typescript
-// Example
-console.log('Booking appointment', { clientId: '123', appointmentId: '456' });
-console.error('Failed to book appointment:', error);
+console.log('Fetching clients', { limit, offset, cacheHit: false });
+console.error('API request failed', { endpoint, statusCode, error });
 ```
 
 ### Code Formatting
 
-**Rule:** Run Prettier before completing any story.
-
----
-
-## Documentation Requirements
-
-**Rule:** Only add documentation when it provides functional value for AI agents or developers modifying code.
-
-- Update project README only if adding new major features or configuration
-- No per-module READMEs required
-- No inline comments unless explaining non-obvious business logic
-- Code should be self-documenting through clear naming
+**Always run Prettier before completing a story:**
+```bash
+bun run format
+```
 
 ---
 
 ## Definition of Done
 
-A story is considered DONE when ALL of the following are complete:
+A story is DONE when ALL of the following are complete:
 
 - [ ] **Implementation**
   - [ ] All acceptance criteria met
-  - [ ] Adapter pattern used for external dependencies (API, cache, database)
+  - [ ] Metadata-driven approach used (no custom logic per endpoint)
   - [ ] Input validation using Zod schemas
-  - [ ] Caching implemented for read operations with appropriate TTL
+  - [ ] Intelligence layer integrated appropriately
   - [ ] Error handling with descriptive messages
 
 - [ ] **Testing**
-  - [ ] Unit tests achieve >90% coverage (or >85% for non-critical features)
+  - [ ] Unit tests achieve required coverage (95% infra, 90% endpoints)
   - [ ] Tests pass consistently
-  - [ ] All external dependencies mocked
+  - [ ] External dependencies mocked
+  - [ ] Edge cases covered
 
 - [ ] **Code Quality**
   - [ ] No TypeScript errors
-  - [ ] No `any` types (except in tests when necessary)
+  - [ ] No `any` types (except tests)
   - [ ] Prettier formatting applied
+  - [ ] Code follows file structure guidelines
 
 - [ ] **Integration**
-  - [ ] MCP tool registered and functional
+  - [ ] Tools registered and functional (for endpoint stories)
   - [ ] Story marked complete in AGILE_PLAN.md
 
 ---
@@ -1146,24 +655,36 @@ A story is considered DONE when ALL of the following are complete:
 
 ### Story Implementation Workflow
 
-When implementing a story from AGILE_PLAN.md:
+#### 1. Analysis (Infrastructure Stories)
+- [ ] Understand component responsibilities
+- [ ] Identify dependencies on other components
+- [ ] Plan integration points
 
-#### 1. Analysis
-- [ ] Read acceptance criteria and identify dependencies
-- [ ] Determine required adapters, cache strategy, and test approach
+#### 1. Analysis (Endpoint Stories)
+- [ ] Consult `api-specs/mindbody-public-api-v6.json`
+- [ ] Identify required parameters and optional parameters
+- [ ] Determine appropriate cache TTL
+- [ ] Check if endpoint supports pagination
 
-#### 2. Implementation
-- [ ] Create type definitions and Zod schemas
-- [ ] Implement adapter interfaces (real + mock)
-- [ ] Implement service layer logic
-- [ ] Implement MCP tool handler
-- [ ] Add error handling and validation
+#### 2. Implementation (Infrastructure Stories)
+- [ ] Create TypeScript interfaces and types
+- [ ] Implement core logic with error handling
+- [ ] Integrate with other components
+- [ ] Add unit tests
+
+#### 2. Implementation (Endpoint Stories)
+- [ ] Create endpoint metadata objects
+- [ ] Define Zod input schemas
+- [ ] Set intelligence configuration
+- [ ] Add to endpoint registry
+- [ ] Create unit tests for metadata validation
 
 #### 3. Testing
-- [ ] Create test fixtures
-- [ ] Write unit tests (happy paths, error paths, edge cases)
-- [ ] Verify coverage target met (90% or 85%)
-- [ ] Ensure all tests pass
+- [ ] Write comprehensive unit tests
+- [ ] Test happy paths
+- [ ] Test error paths
+- [ ] Test edge cases
+- [ ] Verify coverage target met
 
 #### 4. Completion
 - [ ] Review Definition of Done checklist
@@ -1174,97 +695,77 @@ When implementing a story from AGILE_PLAN.md:
 
 ## File Structure
 
-### Project Organization
-
 ```
 mindbody-mcp/
 ├── src/
-│   ├── index.ts                    # Main entry point
-│   ├── server.ts                   # MCP server setup
-│   ├── config/
-│   │   ├── index.ts                # Main config loader
-│   │   ├── ai.ts                   # AI/Mastra configuration
-│   │   ├── api.ts                  # API configuration
-│   │   └── cache.ts                # Cache configuration
-│   ├── adapters/
-│   │   ├── mindbody/
-│   │   │   ├── interface.ts        # IMindbodyAPIAdapter
-│   │   │   ├── factory.ts          # Version factory
-│   │   │   ├── types.ts            # Shared types
-│   │   │   ├── errors.ts           # Error classes
-│   │   │   ├── v6/
-│   │   │   │   ├── adapter.ts      # V6 implementation
-│   │   │   │   ├── client.ts       # HTTP client
-│   │   │   │   ├── endpoints.ts    # Endpoint definitions
-│   │   │   │   └── types.ts        # V6-specific types
-│   │   │   └── mock/
-│   │   │       └── adapter.ts      # Mock for tests
-│   │   ├── cache/
-│   │   │   ├── interface.ts        # ICacheAdapter
-│   │   │   ├── sqlite.ts           # SQLite implementation
-│   │   │   └── mock.ts             # Mock for tests
-│   │   └── ai/
-│   │       ├── interface.ts        # IAIClientAdapter
-│   │       ├── mastra.ts           # Mastra implementation
-│   │       └── mock.ts             # Mock for tests
+│   ├── index.ts                      # Main entry point
+│   ├── server.ts                     # MCP server setup
+│   │
+│   ├── metadata/
+│   │   ├── schema.ts                 # Metadata TypeScript types
+│   │   ├── registry.ts               # Central registry
+│   │   ├── types.ts                  # Shared types
+│   │   └── endpoints/
+│   │       ├── client.ts             # 20 client endpoints
+│   │       ├── appointment.ts        # 12 appointment endpoints
+│   │       ├── class.ts              # 15 class endpoints
+│   │       ├── sale.ts               # 15 sale endpoints
+│   │       ├── staff.ts              # 8 staff endpoints
+│   │       ├── site.ts               # 12 site endpoints
+│   │       ├── enrollment.ts         # 6 enrollment endpoints
+│   │       └── payroll.ts            # 5 payroll endpoints
+│   │
 │   ├── services/
-│   │   ├── appointment/
-│   │   │   ├── service.ts
-│   │   │   ├── types.ts
-│   │   │   ├── validators.ts
-│   │   │   └── service.test.ts
-│   │   ├── class/
-│   │   ├── client/
-│   │   ├── sale/
-│   │   ├── staff/
-│   │   ├── site/
-│   │   ├── enrollment/
-│   │   └── payroll/
+│   │   ├── genericApiHandler.ts      # Core request handler
+│   │   ├── genericApiHandler.test.ts
+│   │   ├── caching.ts                # Caching logic
+│   │   ├── caching.test.ts
+│   │   ├── pagination.ts             # Auto-pagination logic
+│   │   ├── pagination.test.ts
+│   │   ├── auth.ts                   # Token management (existing)
+│   │   ├── rateLimit.ts              # Rate limiting (existing)
+│   │   └── responseTransformer.ts    # Response normalization
+│   │
 │   ├── mcp/
-│   │   ├── tools/
-│   │   │   ├── index.ts            # Tool registry
-│   │   │   ├── appointment.ts      # Appointment tools
-│   │   │   ├── class.ts            # Class tools
-│   │   │   └── ...
-│   │   ├── resources/
-│   │   │   ├── index.ts            # Resource registry
-│   │   │   └── definitions.ts      # Resource definitions
+│   │   ├── toolGenerator.ts          # Auto-generate tools from metadata
+│   │   ├── toolGenerator.test.ts
 │   │   └── handlers/
-│   │       ├── tool.ts             # Tool request handler
-│   │       └── resource.ts         # Resource request handler
+│   │       ├── genericToolHandler.ts # Single handler for all tools
+│   │       └── genericToolHandler.test.ts
+│   │
+│   ├── errors/
+│   │   ├── types.ts                  # Custom error classes
+│   │   └── handlers.ts               # Error handling utilities
+│   │
 │   ├── database/
-│   │   ├── schema.sql              # Database schema
-│   │   ├── migrations/
-│   │   │   ├── 001_initial.sql
-│   │   │   ├── 002_appointments.sql
-│   │   │   └── ...
-│   │   ├── client.ts               # Database client
-│   │   └── queries.ts              # Query helpers
-│   ├── types/
-│   │   ├── index.ts
-│   │   ├── client.ts
-│   │   ├── appointment.ts
-│   │   └── ...
-│   └── utils/
-│       ├── errors.ts
-│       ├── validation.ts
-│       └── cache-keys.ts
-├── tests/
-│   ├── fixtures/
-│   │   ├── clients.json
-│   │   ├── appointments.json
-│   │   └── ...
-│   └── mocks/
-│       └── (additional mocks if needed)
-├── config/
-│   └── default.json                # Default configuration
-├── .env.example                    # Environment template
+│   │   ├── schema.sql                # SQLite schema (existing)
+│   │   └── client.ts                 # Database client (existing)
+│   │
+│   └── __tests__/
+│       ├── fixtures/
+│       │   ├── clientData.ts         # Mock client responses
+│       │   ├── appointmentData.ts    # Mock appointment responses
+│       │   └── ...
+│       └── integration/
+│           └── infrastructure.test.ts # End-to-end tests
+│
+├── api-specs/
+│   └── mindbody-public-api-v6.json   # Official API spec (REFERENCE THIS!)
+│
+├── docs/
+│   ├── INFRASTRUCTURE.md             # How to use the infrastructure
+│   └── endpoints/
+│       ├── CLIENT.md                 # Client endpoints reference
+│       ├── APPOINTMENT.md            # Appointment endpoints reference
+│       └── ...
+│
+├── .env.example
 ├── package.json
 ├── tsconfig.json
 ├── .prettierrc
 ├── README.md
-├── SCRUM_MASTER.md                 # This file
-└── AGILE_PLAN.md                   # Sprint planning
+├── AGILE_PLAN.md                     # Sprint planning (38 stories)
+└── SCRUM_MASTER.md                   # This file
 ```
 
 ---
@@ -1287,45 +788,67 @@ bun test --watch         # Watch mode
 
 # Code Quality
 bun run format           # Format code with Prettier
-bun run lint             # Run linter
 bun run type-check       # Check TypeScript types
-
-# Database
-bun run db:migrate       # Run migrations
-bun run db:rollback      # Rollback last migration
-bun run db:seed          # Seed test data
 ```
 
 ### Story Estimation Guide
 
-- **2 points**: Simple read operation with caching
-- **3 points**: Standard read/write operation
-- **5 points**: Complex operation with validation
-- **8 points**: Multi-step workflow or transaction
+- **2-3 points**: Simple metadata definition (5-8 endpoints)
+- **5 points**: Complex component or metadata group (10+ endpoints)
+- **8 points**: Core infrastructure component
+- **13 points**: Comprehensive testing suite
 
 ### Coverage Targets by Epic
 
 | Epic | Target Coverage |
 |------|----------------|
-| EP-1: Appointments | 90%+ |
-| EP-2: Classes | 90%+ |
-| EP-3: Sales | 95%+ |
-| EP-4: Client | 90%+ |
-| EP-5: Staff | 90%+ |
-| EP-6: Site | 85%+ |
-| EP-7: Enrollment | 85%+ |
-| EP-8: Payroll | 80%+ |
+| EP-1: Infrastructure | 95%+ |
+| EP-2: Client | 90%+ |
+| EP-3: Appointment | 90%+ |
+| EP-4: Class | 90%+ |
+| EP-5: Sale | 95%+ |
+| EP-6: Staff | 90%+ |
+| EP-7: Site | 85%+ |
+| EP-8: Enrollment & Payroll | 85%+ |
+
+---
+
+## Key Differences from Old Architecture
+
+### What Changed
+
+| Aspect | Old Approach | New Approach |
+|--------|--------------|--------------|
+| **Stories** | 83 custom tools | 38 metadata definitions |
+| **Timeline** | 12 weeks | 8 weeks |
+| **Complexity** | High (custom per endpoint) | Low (metadata-driven) |
+| **Adapter Pattern** | Required for everything | Not needed |
+| **Service Layer** | Custom per category | Single generic handler |
+| **Agent Role** | Limited orchestration | Full orchestration |
+| **Maintenance** | High (95+ custom functions) | Low (metadata + 1 handler) |
+
+### What Stayed the Same
+
+- Caching strategy (TTLs, invalidation)
+- Rate limiting (1,000/day limit)
+- Token management (auto-refresh + retry)
+- Testing standards (unit tests only, 90%+ coverage)
+- MCP protocol integration
+- SQLite for cache and rate limiting
 
 ---
 
 ## Conclusion
 
-This Scrum Master document provides streamlined guidelines for implementing the Mindbody MCP Server. By following these standards, AI agents will produce:
+This hybrid architecture achieves 100% Mindbody API coverage in **8 weeks instead of 12** by using a **metadata-driven generic handler** instead of custom logic per endpoint. The agent orchestrates workflows while the server provides intelligent transport, resulting in a maintainable, scalable, and powerful MCP server.
 
-- **Consistent architecture** using adapters and versioning
-- **Comprehensive test coverage** with unit tests (90%+ or 85%+)
-- **Robust caching** to minimize API calls and token usage
-- **Type-safe implementations** without using `any`
-- **Production-ready code** that meets core quality standards
+**When in doubt:**
+1. Check AGILE_PLAN.md for what to implement
+2. Check this document for how to implement it
+3. Reference api-specs/mindbody-public-api-v6.json for endpoint details
 
-When in doubt, refer back to this document. If guidelines conflict with story requirements, prioritize this document's standards and flag the conflict for resolution.
+---
+
+## License
+
+MIT

@@ -9,8 +9,6 @@ import { DatabaseClient } from "../../db/client.js";
 import { AuthService } from "../../services/auth.js";
 import { MindbodyApiClient } from "../../services/mindbody.js";
 import { RateLimitGuard } from "../../services/rateLimit.js";
-import { SyncService } from "../../services/sync.js";
-import { AppointmentService } from "../../services/appointment.js";
 import { ApiResponseCache } from "../../services/apiResponseCache.js";
 import { loadConfig } from "../../config.js";
 import type { Config } from "../../config.js";
@@ -18,7 +16,8 @@ import { unlink } from "fs/promises";
 import { existsSync } from "fs";
 
 /**
- * Integration test context with all real components
+ * Integration test context with foundational components only
+ * (Custom orchestration services removed - use metadata-driven tools instead)
  */
 export interface IntegrationTestContext {
   config: Config;
@@ -27,16 +26,6 @@ export interface IntegrationTestContext {
   rateLimitGuard: RateLimitGuard;
   apiResponseCache: ApiResponseCache;
   apiClient: MindbodyApiClient;
-  syncService: SyncService;
-  appointmentService: AppointmentService;
-}
-
-/**
- * Creates a test database path with timestamp to avoid conflicts
- */
-function getTestDbPath(): string {
-  const timestamp = Date.now();
-  return `./test-data/integration-test-${timestamp}.db`;
 }
 
 /**
@@ -78,10 +67,6 @@ export async function setupIntegrationTest(): Promise<IntegrationTestContext> {
   // Create real API client with caching enabled (makes actual HTTP requests)
   const apiClient = new MindbodyApiClient(testConfig, rateLimitGuard, authService, apiResponseCache);
 
-  // Create real services
-  const syncService = new SyncService(apiClient, db);
-  const appointmentService = new AppointmentService(apiClient, db);
-
   return {
     config: testConfig,
     db,
@@ -89,8 +74,6 @@ export async function setupIntegrationTest(): Promise<IntegrationTestContext> {
     rateLimitGuard,
     apiResponseCache,
     apiClient,
-    syncService,
-    appointmentService,
   };
 }
 
@@ -199,7 +182,7 @@ export function parseResponseJson<T>(response: {
   // Try to find JSON in the response (may be wrapped in markdown)
   const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/({[\s\S]*})/);
 
-  if (!jsonMatch) {
+  if (!jsonMatch || !jsonMatch[1]) {
     throw new Error("No JSON found in response");
   }
 
